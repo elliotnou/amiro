@@ -1,15 +1,38 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import { useFriends } from '../lib/hooks/useFriends'
 import { feelings } from '../data/mock'
+import { uploadImage } from '../lib/cloudinary'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 import Modal from '../components/Modal'
 import { IconPlus } from '../components/Icons'
+
+const MAX_PHOTOS = 5
+
+function IconImage({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  )
+}
+
+interface AlbumPhoto {
+  preview: string     // local object URL
+  url: string | null  // cloudinary URL after upload
+  uploading: boolean
+}
 
 export default function Hangouts() {
   const { hangouts, loading, createHangout } = useHangouts()
   const { friends } = useFriends()
+  const { user } = useAuth()
   const [showLogModal, setShowLogModal] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   // Form state
   const [hDate, setHDate] = useState(new Date().toISOString().slice(0, 10))
@@ -18,22 +41,86 @@ export default function Hangouts() {
   const [hHighlights, setHHighlights] = useState('')
   const [hSelectedFriends, setHSelectedFriends] = useState<string[]>([])
   const [hFeeling, setHFeeling] = useState('')
+  const [album, setAlbum] = useState<AlbumPhoto[]>([])
   const [saving, setSaving] = useState(false)
 
   const toggleFriend = (id: string) =>
     setHSelectedFriends(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
 
+  const handlePhotoAdd = async (files: FileList) => {
+    const slots = MAX_PHOTOS - album.length
+    const toAdd = Array.from(files).slice(0, slots)
+    if (toAdd.length === 0) return
+
+    // Add placeholders immediately so UI feels responsive
+    const placeholders: AlbumPhoto[] = toAdd.map(f => ({
+      preview: URL.createObjectURL(f),
+      url: null,
+      uploading: true,
+    }))
+    setAlbum(prev => [...prev, ...placeholders])
+
+    // Upload each in parallel
+    await Promise.all(toAdd.map(async (file, i) => {
+      try {
+        const url = await uploadImage(file, { maxWidth: 1400, quality: 0.84 })
+        setAlbum(prev => {
+          const next = [...prev]
+          const idx = prev.length - toAdd.length + i
+          if (next[idx]) next[idx] = { ...next[idx], url, uploading: false }
+          return next
+        })
+      } catch {
+        setAlbum(prev => {
+          const next = [...prev]
+          const idx = prev.length - toAdd.length + i
+          if (next[idx]) next[idx] = { ...next[idx], uploading: false }
+          return next
+        })
+      }
+    }))
+  }
+
+  const removePhoto = (i: number) => {
+    setAlbum(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  const moveFirst = (i: number) => {
+    if (i === 0) return
+    setAlbum(prev => {
+      const next = [...prev]
+      const [moved] = next.splice(i, 1)
+      next.unshift(moved)
+      return next
+    })
+  }
+
+  const resetForm = () => {
+    setHType(''); setHLocation(''); setHHighlights('')
+    setHSelectedFriends([]); setHFeeling('')
+    setAlbum([])
+    setHDate(new Date().toISOString().slice(0, 10))
+  }
+
+  const anyUploading = album.some(p => p.uploading)
+
   const handleLog = async () => {
-    if (!hType.trim() || !hLocation.trim()) return
+    if (!hType.trim() || !hLocation.trim() || anyUploading) return
     setSaving(true)
-    await createHangout(
+    const result = await createHangout(
       { type: hType, location: hLocation, date: hDate, highlights: hHighlights || undefined },
       hSelectedFriends.map(id => ({ id, feeling_label: hFeeling || undefined }))
     )
+    // Save all album photos to gallery_images (first = banner)
+    if (result?.id && user && album.length > 0) {
+      const rows = album
+        .filter(p => p.url)
+        .map(p => ({ hangout_id: result.id, url: p.url!, user_id: user.id, caption: null, friend_id: null }))
+      if (rows.length > 0) await supabase.from('gallery_images').insert(rows)
+    }
     setSaving(false)
     setShowLogModal(false)
-    setHType(''); setHLocation(''); setHHighlights(''); setHSelectedFriends([]); setHFeeling('')
-    setHDate(new Date().toISOString().slice(0, 10))
+    resetForm()
   }
 
   return (
@@ -88,7 +175,83 @@ export default function Hangouts() {
       )}
 
       {/* Log hangout modal */}
-      <Modal open={showLogModal} onClose={() => setShowLogModal(false)} title="Log a hangout">
+      <Modal open={showLogModal} onClose={() => { setShowLogModal(false); resetForm() }} title="Log a hangout">
+
+        {/* ── Photo album section ── */}
+        <div className="form-group">
+          <label className="form-label" style={{ marginBottom: 8 }}>
+            Photos <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— up to {MAX_PHOTOS}, first is banner</span>
+          </label>
+
+          {album.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 8 }}>
+              {album.map((photo, i) => (
+                <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--bg)' }}>
+                  <img src={photo.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: photo.uploading ? 0.5 : 1 }} />
+                  {photo.uploading && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)' }}>
+                      <span style={{ color: 'white', fontSize: '0.65rem', fontFamily: 'var(--font-sans)' }}>↑</span>
+                    </div>
+                  )}
+                  {i === 0 && !photo.uploading && (
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', padding: '3px', textAlign: 'center' }}>
+                      <span style={{ color: 'white', fontSize: '0.55rem', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>BANNER</span>
+                    </div>
+                  )}
+                  <div style={{ position: 'absolute', top: 3, right: 3, display: 'flex', gap: 3 }}>
+                    {i !== 0 && (
+                      <button onClick={() => moveFirst(i)} style={{
+                        width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.9)',
+                        border: 'none', cursor: 'pointer', fontSize: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }} title="Set as banner">★</button>
+                    )}
+                    <button onClick={() => removePhoto(i)} style={{
+                      width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.55)',
+                      border: 'none', cursor: 'pointer', color: 'white', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                    }}>×</button>
+                  </div>
+                </div>
+              ))}
+              {album.length < MAX_PHOTOS && (
+                <button onClick={() => photoInputRef.current?.click()} style={{
+                  aspectRatio: '1', borderRadius: 'var(--radius-md)', border: '2px dashed var(--border)',
+                  background: 'var(--bg)', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--text-muted)',
+                }}>
+                  <IconImage size={16} />
+                  <span style={{ fontSize: '0.6rem', fontFamily: 'var(--font-sans)' }}>Add</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => photoInputRef.current?.click()}
+              style={{
+                width: '100%', padding: '18px', borderRadius: 'var(--radius-lg)',
+                border: '2px dashed var(--border)', background: 'var(--bg)',
+                cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 6, color: 'var(--text-muted)',
+                transition: 'border-color 0.15s, background 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-bg)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg)' }}
+            >
+              <IconImage size={20} />
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem' }}>Add photos (up to {MAX_PHOTOS})</span>
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', opacity: 0.7 }}>First photo becomes the banner</span>
+            </button>
+          )}
+
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={e => e.target.files && handlePhotoAdd(e.target.files)}
+          />
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
           <div className="form-group">
             <label className="form-label">Date</label>
@@ -112,7 +275,7 @@ export default function Hangouts() {
               {friends.map(f => (
                 <button
                   key={f.id}
-                  className={`pill pill-default`}
+                  className="pill pill-default"
                   style={{ cursor: 'pointer', opacity: hSelectedFriends.includes(f.id) ? 1 : 0.45 }}
                   onClick={() => toggleFriend(f.id)}
                 >
@@ -146,9 +309,9 @@ export default function Hangouts() {
         </div>
 
         <div className="modal-actions">
-          <button className="btn btn-ghost" onClick={() => setShowLogModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleLog} disabled={saving || !hType.trim() || !hLocation.trim()}>
-            {saving ? 'Saving…' : 'Save'}
+          <button className="btn btn-ghost" onClick={() => { setShowLogModal(false); resetForm() }}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleLog} disabled={saving || !hType.trim() || !hLocation.trim() || anyUploading}>
+            {saving ? 'Saving…' : anyUploading ? 'Uploading photos…' : 'Save'}
           </button>
         </div>
       </Modal>

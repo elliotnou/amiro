@@ -423,6 +423,11 @@ img { display: block; max-width: 100%; }
 .friend-card-info {
   padding: var(--space-md) var(--space-md) var(--space-lg);
   text-align: center;
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .friend-card-name {

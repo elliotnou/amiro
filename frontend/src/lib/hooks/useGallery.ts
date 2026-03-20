@@ -6,7 +6,7 @@ import type { Database } from '../database.types'
 
 export type GalleryImageRow = Database['public']['Tables']['gallery_images']['Row']
 
-export function useGallery(friendId?: string) {
+export function useGallery(friendId?: string, hangoutId?: string) {
   const { user } = useAuth()
   const [images, setImages] = useState<GalleryImageRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -14,29 +14,30 @@ export function useGallery(friendId?: string) {
 
   const load = useCallback(async () => {
     if (!user) return
-    let q = supabase.from('gallery_images').select('*').order('created_at', { ascending: false })
-    if (friendId) q = q.eq('friend_id', friendId)
+    let q = supabase.from('gallery_images').select('*').order('created_at', { ascending: true })
+    if (hangoutId) q = q.eq('hangout_id', hangoutId)
+    else if (friendId) q = q.eq('friend_id', friendId)
     const { data } = await q
     setImages(data ?? [])
     setLoading(false)
-  }, [user, friendId])
+  }, [user, friendId, hangoutId])
 
   useEffect(() => { load() }, [load])
 
-  const uploadPhoto = async (file: File, hangoutId?: string, caption?: string) => {
+  const uploadPhoto = async (file: File, opts?: { hangoutId?: string; caption?: string }) => {
     if (!user) return { error: 'Not authenticated' }
     setUploading(true)
     try {
-      const url = await uploadImage(file)
+      const url = await uploadImage(file, { maxWidth: 1400, quality: 0.84 })
       const { error } = await supabase.from('gallery_images').insert({
         user_id: user.id,
         friend_id: friendId ?? null,
-        hangout_id: hangoutId ?? null,
+        hangout_id: opts?.hangoutId ?? hangoutId ?? null,
         url,
-        caption: caption ?? null,
+        caption: opts?.caption ?? null,
       })
       if (!error) await load()
-      return { error: error?.message ?? null }
+      return { error: error?.message ?? null, url }
     } catch (e: any) {
       return { error: e.message }
     } finally {
@@ -49,5 +50,5 @@ export function useGallery(friendId?: string) {
     setImages(prev => prev.filter(img => img.id !== id))
   }
 
-  return { images, loading, uploading, uploadPhoto, deleteImage }
+  return { images, loading, uploading, uploadPhoto, deleteImage, reload: load }
 }

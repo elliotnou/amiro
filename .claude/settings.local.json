@@ -5,7 +5,9 @@
       "Bash(npx --yes create-vite@latest friendgraph-temp --template react-ts)",
       "Bash(cp -r friendgraph-temp/* .)",
       "Bash(cp friendgraph-temp/.gitignore .)",
-      "Bash(rm -rf friendgraph-temp)"
+      "Bash(rm -rf friendgraph-temp)",
+      "Bash(find /Users/woochachino/amiro/frontend/src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.json \\\\\\))",
+      "Bash(find /Users/woochachino/amiro/backend -type f \\\\\\(-name *.ts -o -name *.sql -o -name *.json \\\\\\))"
     ]
   }
 }

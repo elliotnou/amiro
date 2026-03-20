@@ -26,90 +26,92 @@ export default function Sidebar() {
   const recentFriends = friends.slice(0, 4)
 
   return (
-    <aside className="sidebar">
-      <Link to="/" className="sidebar-logo" style={{ textDecoration: 'none' }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: 'var(--text)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', color: 'white', flexShrink: 0,
-        }}>
-          <LogoIcon size={18} />
-        </div>
-        amily
-      </Link>
+    <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* ── Scrollable top section ── */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Link to="/" className="sidebar-logo" style={{ textDecoration: 'none' }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: 'var(--text)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', color: 'white', flexShrink: 0,
+          }}>
+            <LogoIcon size={18} />
+          </div>
+          amily
+        </Link>
 
-      <div className="sidebar-section-label">Menu</div>
-      <nav className="sidebar-nav">
-        {navItems.map(item => (
+        <div className="sidebar-section-label">Menu</div>
+        <nav className="sidebar-nav">
+          {navItems.map(item => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/home'}
+              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            >
+              <span className="link-icon"><item.Icon size={18} /></span>
+              {item.label}
+            </NavLink>
+          ))}
           <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/home'}
-            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            to="/ai"
+            className={({ isActive }) => `sidebar-link ai-link ${isActive ? 'active' : ''}`}
           >
-            <span className="link-icon"><item.Icon size={18} /></span>
-            {item.label}
+            <span className="link-icon"><IconSparkle size={18} /></span>
+            AI Assistant
           </NavLink>
-        ))}
-        <NavLink
-          to="/ai"
-          className={({ isActive }) => `sidebar-link ai-link ${isActive ? 'active' : ''}`}
-        >
-          <span className="link-icon"><IconSparkle size={18} /></span>
-          AI Assistant
-        </NavLink>
-      </nav>
+        </nav>
 
-      <div className="sidebar-divider" />
+        <div className="sidebar-divider" />
 
-      <div className="sidebar-section-label">Overview</div>
-      <div className="sidebar-stats">
-        <div className="sidebar-stat">
-          <span>Friends</span>
-          <span className="sidebar-stat-value">{friends.length}</span>
+        <div className="sidebar-section-label">Overview</div>
+        <div className="sidebar-stats">
+          <div className="sidebar-stat">
+            <span>Friends</span>
+            <span className="sidebar-stat-value">{friends.length}</span>
+          </div>
+          <div className="sidebar-stat">
+            <span>Hangouts</span>
+            <span className="sidebar-stat-value">{hangouts.length}</span>
+          </div>
+          <div className="sidebar-stat">
+            <span>Inner circle</span>
+            <span className="sidebar-stat-value">{innerCircleCount}</span>
+          </div>
         </div>
-        <div className="sidebar-stat">
-          <span>Hangouts</span>
-          <span className="sidebar-stat-value">{hangouts.length}</span>
-        </div>
-        <div className="sidebar-stat">
-          <span>Inner circle</span>
-          <span className="sidebar-stat-value">{innerCircleCount}</span>
-        </div>
+
+        <div className="sidebar-divider" />
+
+        {/* Recent friends mini list */}
+        {recentFriends.length > 0 && (
+          <>
+            <div className="sidebar-section-label">Recent</div>
+            <nav className="sidebar-nav">
+              {recentFriends.map(f => (
+                <NavLink
+                  key={f.id}
+                  to={`/friends/${f.id}`}
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                >
+                  <div style={{
+                    width: 24, height: 24, borderRadius: '50%',
+                    background: f.avatar_color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.55rem', color: 'white',
+                    fontFamily: 'var(--font-serif)', fontWeight: 500, flexShrink: 0,
+                  }}>
+                    {f.initials}
+                  </div>
+                  <span style={{ fontSize: '0.85rem' }}>{f.name.split(' ')[0]}</span>
+                </NavLink>
+              ))}
+            </nav>
+          </>
+        )}
       </div>
 
-      <div className="sidebar-divider" />
-
-      {/* Recent friends mini list */}
-      {recentFriends.length > 0 && (
-        <>
-          <div className="sidebar-section-label">Recent</div>
-          <nav className="sidebar-nav">
-            {recentFriends.map(f => (
-              <NavLink
-                key={f.id}
-                to={`/friends/${f.id}`}
-                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-              >
-                <div style={{
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: f.avatar_color,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.55rem', color: 'white',
-                  fontFamily: 'var(--font-serif)', fontWeight: 500, flexShrink: 0,
-                }}>
-                  {f.initials}
-                </div>
-                <span style={{ fontSize: '0.85rem' }}>{f.name.split(' ')[0]}</span>
-              </NavLink>
-            ))}
-          </nav>
-          <div className="sidebar-divider" />
-        </>
-      )}
-
-      <div className="sidebar-bottom">
-        {/* Settings nav item */}
+      {/* ── Always-visible bottom section ── */}
+      <div className="sidebar-bottom" style={{ flexShrink: 0 }}>
         <nav className="sidebar-nav" style={{ marginBottom: 'var(--space-md)' }}>
           <NavLink
             to="/settings"
@@ -120,7 +122,6 @@ export default function Sidebar() {
           </NavLink>
         </nav>
 
-        {/* User + sign out */}
         {user && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',

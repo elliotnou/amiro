@@ -13,18 +13,19 @@ export default function LoadingScreen() {
         src="/loading.gif"
         alt="Loading…"
         style={{
-          width: 96,
-          height: 96,
+          width: 160,
+          height: 160,
           objectFit: 'contain',
-          borderRadius: 'var(--radius-lg)',
-          opacity: 0.85,
+          borderRadius: 'var(--radius-xl)',
+          mixBlendMode: 'multiply',
         }}
       />
       <p style={{
         fontFamily: 'var(--font-serif)',
-        fontSize: '0.9rem',
+        fontSize: '1rem',
         color: 'var(--text-muted)',
-        letterSpacing: '0.04em',
+        letterSpacing: '0.06em',
+        fontStyle: 'italic',
       }}>
         loading…
       </p>

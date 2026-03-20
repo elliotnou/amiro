@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useFriend } from '../lib/hooks/useFriend'
 import type { FriendContactRow } from '../lib/hooks/useFriend'
+import { useFriends } from '../lib/hooks/useFriends'
 import { useImpressions } from '../lib/hooks/useImpressions'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import LoadingScreen from '../components/LoadingScreen'
@@ -13,6 +14,38 @@ import { IconArrowLeft, IconPhone, IconMail, IconLink, IconPaintbrush } from '..
 import { tierLabel, tierColor } from '../data/mock'
 
 const MET_HOW_OPTIONS = ['School','Work','Mutual friend','Online','Neighborhood','Event','Travel','Family','Other']
+
+// Pencil icon inline (no Icons.tsx change needed)
+function IconPencil({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
+function IconTrash({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
+
+function IconExpand({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 3 21 3 21 9" />
+      <polyline points="9 21 3 21 3 15" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  )
+}
 
 type Tab = 'overview' | 'impressions' | 'gallery' | 'gifts'
 
@@ -33,21 +66,30 @@ function FreshnessRing({ percentage, color, size = 140, trackColor }: { percenta
 
 export default function FriendProfile() {
   const { id } = useParams()
-  const { friend, loading, addFact, addNote, upsertContact, updateFriend } = useFriend(id)
+  const navigate = useNavigate()
+  const { friend, loading, addFact, deleteFact, addNote, upsertContact, updateFriend } = useFriend(id)
+  const { deleteFriend } = useFriends()
   const { impressions, createImpression } = useImpressions(id)
   const { hangouts } = useHangouts()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
+
+  // ── Modal visibility ──
   const [showFactModal, setShowFactModal] = useState(false)
+  const [showFactsPanel, setShowFactsPanel] = useState(false)
   const [showNoteModal, setShowNoteModal] = useState(false)
   const [showImpressionModal, setShowImpressionModal] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
-  const [showCustomize, setShowCustomize] = useState(false)
-  const [customizeTab, setCustomizeTab] = useState<'info' | 'style'>('info')
+  const [showEditInfo, setShowEditInfo] = useState(false)   // ← info editing
+  const [showCustomize, setShowCustomize] = useState(false) // ← style only
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteNameInput, setDeleteNameInput] = useState('')
+
+  // ── Style state (persists in-session) ──
   const [themeColor, setThemeColor] = useState<string | null>(null)
   const [profileFont, setProfileFont] = useState('default')
   const [effect, setEffect] = useState('none')
 
-  // Editable info fields (initialized on open)
+  // ── Edit Info state ──
   const [editName, setEditName] = useState('')
   const [editLocation, setEditLocation] = useState('')
   const [editBirthday, setEditBirthday] = useState('')
@@ -60,7 +102,7 @@ export default function FriendProfile() {
   const [savingInfo, setSavingInfo] = useState(false)
   const editPhotoRef = useRef<HTMLInputElement>(null)
 
-  const openCustomize = () => {
+  const openEditInfo = () => {
     if (!friend) return
     setEditName(friend.name)
     setEditLocation(friend.location || '')
@@ -70,8 +112,7 @@ export default function FriendProfile() {
     setEditTier(friend.tier)
     setEditAvatarPreview(friend.avatar_url || null)
     setEditAvatarUrl(friend.avatar_url || null)
-    setCustomizeTab('info')
-    setShowCustomize(true)
+    setShowEditInfo(true)
   }
 
   const handleEditPhoto = async (file: File) => {
@@ -98,25 +139,26 @@ export default function FriendProfile() {
       avatar_url: editAvatarUrl,
     })
     setSavingInfo(false)
-    setShowCustomize(false)
+    setShowEditInfo(false)
   }
 
-  // Fact modal state
+  // ── Fact modal state ──
   const [factCategory, setFactCategory] = useState('')
   const [factValue, setFactValue] = useState('')
   const [factCustomCat, setFactCustomCat] = useState('')
   const [savingFact, setSavingFact] = useState(false)
+  const [deletingFactId, setDeletingFactId] = useState<string | null>(null)
 
-  // Note modal state
+  // ── Note modal state ──
   const [noteText, setNoteText] = useState('')
   const [savingNote, setSavingNote] = useState(false)
 
-  // Impression modal state
+  // ── Impression modal state ──
   const [impTitle, setImpTitle] = useState('')
   const [impBody, setImpBody] = useState('')
   const [savingImp, setSavingImp] = useState(false)
 
-  // Contact modal state
+  // ── Contact modal state ──
   const contactRef = {
     phone: useRef<HTMLInputElement>(null),
     email: useRef<HTMLInputElement>(null),
@@ -133,14 +175,12 @@ export default function FriendProfile() {
   const friendHangouts = hangouts.filter(h => h.hangout_friends.some(hf => hf.friend_id === id))
   const tabs: Tab[] = ['overview', 'impressions', 'gallery', 'gifts']
   const freshness = Math.max(10, Math.min(95, 100 - Math.floor(friend.day_count / 40)))
-  const tColor = tierColor(friend.tier)
   const bannerColor = themeColor || friend.avatar_color
   const fontFamily = profileFont === 'mono' ? "'SF Mono', 'Fira Code', monospace"
     : profileFont === 'sans' ? 'var(--font-sans)' : undefined
 
   const colorSwatches = [friend.avatar_color,'#e07a5f','#457b9d','#c9a96e','#7c6fbd','#4a7deb','#2d6a4f','#d4a373','#e76f51','#264653','#6d597a']
 
-  // Relationship radar scores — pure math, no AI
   const radarScores = computeRadarScores({
     hangouts: friendHangouts.map(h => ({ date: h.date })),
     hangoutCount: friend.hangout_count,
@@ -156,7 +196,14 @@ export default function FriendProfile() {
     setSavingFact(true)
     await addFact(cat, factValue)
     setSavingFact(false)
-    setShowFactModal(false); setFactCategory(''); setFactValue(''); setFactCustomCat('')
+    setShowFactModal(false)
+    setFactCategory(''); setFactValue(''); setFactCustomCat('')
+  }
+
+  const handleDeleteFact = async (factId: string) => {
+    setDeletingFactId(factId)
+    await deleteFact(factId)
+    setDeletingFactId(null)
   }
 
   const handleSaveNote = async () => {
@@ -189,13 +236,22 @@ export default function FriendProfile() {
     setShowContactModal(false)
   }
 
+  const handleDeleteFriend = async () => {
+    await deleteFriend(friend.id)
+    navigate('/friends')
+  }
+
   const contact: Partial<FriendContactRow> = friend.contact ?? {}
+
+  const FACT_CATEGORIES = ['Fave food','Drink order','Dietary','Fave artist','Fave color','Fave movie','Fave book','Shirt size','Other']
 
   return (
     <div className="page-container" style={{ maxWidth: 1000, ...(fontFamily ? { fontFamily } : {}) }}>
-      <Link to="/friends" className="back-link animate-in">
-        <IconArrowLeft size={14} /> Friends
-      </Link>
+      <div className="animate-in" style={{ marginBottom: 'var(--space-md)' }}>
+        <Link to="/friends" className="back-link">
+          <IconArrowLeft size={14} /> Friends
+        </Link>
+      </div>
 
       {/* ═══ HERO BANNER ═══ */}
       <div className="animate-in animate-in-1" style={{
@@ -204,14 +260,23 @@ export default function FriendProfile() {
         boxShadow: effect === 'glow' ? `0 0 40px ${bannerColor}44, var(--shadow-md)` : 'var(--shadow-md)',
         position: 'relative',
       }}>
-        <button onClick={() => setShowCustomize(true)} style={{
-          position: 'absolute', top: 12, right: 12, zIndex: 2,
-          background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 'var(--radius-full)',
-          width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: 'white', backdropFilter: 'blur(4px)',
-        }} title="Customize profile">
-          <IconPaintbrush size={16} />
-        </button>
+        {/* Both buttons stacked on the top-right */}
+        <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 2, display: 'flex', gap: 8 }}>
+          <button onClick={openEditInfo} style={{
+            background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 'var(--radius-full)',
+            width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'white', backdropFilter: 'blur(6px)',
+          }} title="Edit info">
+            <IconPencil size={15} />
+          </button>
+          <button onClick={() => setShowCustomize(true)} style={{
+            background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: 'var(--radius-full)',
+            width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'white', backdropFilter: 'blur(6px)',
+          }} title="Customize style">
+            <IconPaintbrush size={16} />
+          </button>
+        </div>
 
         <div style={{
           background: `linear-gradient(135deg, ${bannerColor} 0%, ${bannerColor}cc 50%, ${bannerColor}88 100%)`,
@@ -223,8 +288,11 @@ export default function FriendProfile() {
               position: 'absolute', top: 12, left: 12, right: 12, bottom: 12, borderRadius: '50%',
               background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: 'white', fontFamily: 'var(--font-serif)', fontSize: '2.4rem', fontWeight: 500, backdropFilter: 'blur(4px)',
+              overflow: 'hidden',
             }}>
-              {friend.initials}
+              {friend.avatar_url
+                ? <img src={friend.avatar_url} alt={friend.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : friend.initials}
             </div>
             <div style={{
               position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)',
@@ -343,20 +411,41 @@ export default function FriendProfile() {
                 <RelationshipRadar scores={radarScores} color={friend.avatar_color} size={200} />
               </div>
 
+              {/* Facts card — compact preview + open panel */}
               <div className="card">
                 <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
                   <span className="section-label-sm">Facts</span>
-                  <button className="btn btn-ghost btn-sm text-sans" style={{ padding: '2px 6px', fontSize: '0.68rem' }} onClick={() => setShowFactModal(true)}>+ add</button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn btn-ghost btn-sm text-sans" style={{ padding: '2px 6px', fontSize: '0.68rem' }} onClick={() => setShowFactModal(true)}>+ add</button>
+                    <button
+                      className="btn btn-ghost btn-sm text-sans"
+                      style={{ padding: '2px 6px', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: 3 }}
+                      onClick={() => setShowFactsPanel(true)}
+                      title="View all facts"
+                    >
+                      <IconExpand size={11} /> all
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {friend.facts.map(fact => (
-                    <div key={fact.id} style={{ padding: '10px 12px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)' }}>
-                      <div className="text-xs text-muted text-sans" style={{ marginBottom: 2 }}>{fact.category}</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{fact.value}</div>
-                    </div>
-                  ))}
-                  {friend.facts.length === 0 && <span className="text-xs text-muted text-sans">No facts yet</span>}
-                </div>
+
+                {friend.facts.length === 0 ? (
+                  <span className="text-xs text-muted text-sans">No facts yet</span>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {friend.facts.slice(0, 4).map(fact => (
+                      <FactItem key={fact.id} fact={fact} onDelete={handleDeleteFact} deletingId={deletingFactId} accentColor={bannerColor} />
+                    ))}
+                    {friend.facts.length > 4 && (
+                      <button onClick={() => setShowFactsPanel(true)} style={{
+                        padding: '10px 12px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)',
+                        border: '1px dashed var(--border)', cursor: 'pointer', color: 'var(--text-muted)',
+                        fontFamily: 'var(--font-sans)', fontSize: '0.75rem', textAlign: 'center',
+                      }}>
+                        +{friend.facts.length - 4} more
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -443,12 +532,14 @@ export default function FriendProfile() {
       )}
 
       {/* ═══ MODALS ═══ */}
+
+      {/* Add Fact */}
       <Modal open={showFactModal} onClose={() => setShowFactModal(false)} title="Add a fact">
         <div className="form-group">
           <label className="form-label">Category</label>
           <div className="pill-wrap">
-            {['Fave food','Drink order','Dietary','Fave artist','Fave color','Fave movie','Fave book','Shirt size','Other'].map(cat => (
-              <button key={cat} className={`pill pill-default`} style={{ cursor: 'pointer', opacity: factCategory === cat ? 1 : 0.5 }} onClick={() => setFactCategory(cat)}>{cat}</button>
+            {FACT_CATEGORIES.map(cat => (
+              <button key={cat} className="pill pill-default" style={{ cursor: 'pointer', opacity: factCategory === cat ? 1 : 0.5 }} onClick={() => setFactCategory(cat)}>{cat}</button>
             ))}
           </div>
           {factCategory === 'Other' && (
@@ -465,6 +556,50 @@ export default function FriendProfile() {
         </div>
       </Modal>
 
+      {/* Facts Full Panel */}
+      {showFactsPanel && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'var(--bg-modal-backdrop)', display: 'flex', alignItems: 'flex-end',
+          justifyContent: 'center',
+        }} onClick={() => setShowFactsPanel(false)}>
+          <div style={{
+            width: '100%', maxWidth: 640, background: 'var(--bg-card)',
+            borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
+            padding: 'var(--space-xl)', maxHeight: '80vh', overflowY: 'auto',
+            boxShadow: 'var(--shadow-lg)',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Handle */}
+            <div style={{ width: 40, height: 4, background: 'var(--border)', borderRadius: 2, margin: '0 auto var(--space-lg)' }} />
+
+            <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-lg)' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', fontWeight: 500 }}>{friend.name}'s facts</h2>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{friend.facts.length} {friend.facts.length === 1 ? 'fact' : 'facts'} recorded</p>
+              </div>
+              <button className="btn btn-primary btn-sm" onClick={() => { setShowFactsPanel(false); setShowFactModal(true) }}>+ Add fact</button>
+            </div>
+
+            {friend.facts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontSize: '0.88rem' }}>
+                No facts yet. Add some things you know about {friend.name}.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {friend.facts.map(fact => (
+                  <FactItem key={fact.id} fact={fact} onDelete={handleDeleteFact} deletingId={deletingFactId} accentColor={bannerColor} large />
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 'var(--space-lg)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+              <button className="btn btn-ghost" onClick={() => setShowFactsPanel(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Note */}
       <Modal open={showNoteModal} onClose={() => setShowNoteModal(false)} title="Add a note">
         <div className="form-group">
           <textarea className="form-textarea form-textarea-serif" placeholder="What's on your mind about this person?" value={noteText} onChange={e => setNoteText(e.target.value)} />
@@ -475,6 +610,7 @@ export default function FriendProfile() {
         </div>
       </Modal>
 
+      {/* Write Impression */}
       <Modal open={showImpressionModal} onClose={() => setShowImpressionModal(false)} title="Write an impression">
         <div className="form-group">
           <input className="form-input" placeholder="Title (optional)" style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }} value={impTitle} onChange={e => setImpTitle(e.target.value)} />
@@ -488,7 +624,122 @@ export default function FriendProfile() {
         </div>
       </Modal>
 
-      <Modal open={showCustomize} onClose={() => setShowCustomize(false)} title="Customize profile">
+      {/* ── Edit Info Modal ── */}
+      <Modal open={showEditInfo} onClose={() => setShowEditInfo(false)} title="Edit profile info">
+        {/* Avatar */}
+        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%', background: bannerColor,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', flexShrink: 0, cursor: 'pointer', position: 'relative',
+          }} onClick={() => editPhotoRef.current?.click()}>
+            {editAvatarPreview
+              ? <img src={editAvatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span style={{ color: 'white', fontFamily: 'var(--font-serif)', fontSize: '1.6rem' }}>{friend.initials}</span>}
+            <div style={{
+              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0,
+              transition: 'opacity 0.15s',
+            }} className="avatar-overlay">
+              <span style={{ color: 'white', fontSize: '0.7rem', fontFamily: 'var(--font-sans)' }}>Change</span>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 4 }}>Profile photo</div>
+            <button className="btn btn-default btn-sm" onClick={() => editPhotoRef.current?.click()} disabled={uploadingAvatar}>
+              {uploadingAvatar ? 'Uploading…' : 'Change photo'}
+            </button>
+          </div>
+          <input ref={editPhotoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleEditPhoto(e.target.files[0])} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <label className="form-label">Name</label>
+            <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Full name" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Location</label>
+            <input className="form-input" value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="City, Country" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Birthday</label>
+            <input className="form-input" type="date" value={editBirthday} onChange={e => setEditBirthday(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Met date</label>
+            <input className="form-input" type="date" value={editMetDate} onChange={e => setEditMetDate(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">How you met</label>
+            <select className="form-input" value={editMetHow} onChange={e => setEditMetHow(e.target.value)} style={{ cursor: 'pointer' }}>
+              <option value="">Select…</option>
+              {MET_HOW_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Tier</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {([
+              { key: 'inner-circle' as const, symbol: '✦', desc: 'Your closest people. The ones you call first.' },
+              { key: 'close-friend' as const, symbol: '◆', desc: 'Real friends. You check in, they check in.' },
+              { key: 'casual' as const, symbol: '◇', desc: 'People you enjoy. Seeing them is always a good vibe.' },
+            ]).map(t => (
+              <button key={t.key} onClick={() => setEditTier(t.key)} style={{
+                padding: '10px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                border: `2px solid ${editTier === t.key ? tierColor(t.key) : 'var(--border)'}`,
+                background: editTier === t.key ? `${tierColor(t.key)}10` : 'var(--bg)',
+                textAlign: 'left', transition: 'all 0.18s', display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <span style={{ fontSize: '1.1rem', color: tierColor(t.key), flexShrink: 0, width: 22, textAlign: 'center' }}>{t.symbol}</span>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.82rem', color: editTier === t.key ? tierColor(t.key) : 'var(--text)', marginBottom: 1 }}>{tierLabel(t.key)}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t.desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={() => setShowEditInfo(false)}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSaveInfo} disabled={savingInfo}>{savingInfo ? 'Saving…' : 'Save changes'}</button>
+        </div>
+
+        {/* Danger zone — tucked at the bottom */}
+        <div style={{ marginTop: 'var(--space-md)', paddingTop: 'var(--space-md)', borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={() => { setShowEditInfo(false); setShowDeleteConfirm(true) }}
+            style={{
+              width: '100%', padding: '8px', borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border)', background: 'transparent',
+              color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontSize: '0.75rem',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'var(--negative)'; b.style.color = 'var(--negative)'; b.style.background = 'var(--negative-bg)' }}
+            onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'var(--border)'; b.style.color = 'var(--text-muted)'; b.style.background = 'transparent' }}
+          >
+            <IconTrash size={13} /> Remove {friend.name} from your graph
+          </button>
+        </div>
+
+        <style>{`.avatar-overlay { opacity: 0 !important; } div:hover > .avatar-overlay { opacity: 1 !important; }`}</style>
+      </Modal>
+
+      {/* ── Customize Style Modal ── */}
+      <Modal open={showCustomize} onClose={() => setShowCustomize(false)} title="Customize style">
+        <div style={{
+          padding: '12px 16px', borderRadius: 'var(--radius-md)',
+          background: bannerColor, marginBottom: 'var(--space-lg)',
+          ...(effect === 'glow' ? { boxShadow: `0 0 30px ${bannerColor}44` } : {}),
+        }}>
+          <span style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 500, ...(effect === 'gradient' ? { background: 'linear-gradient(135deg,white,rgba(255,255,255,0.6))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' } : { color: 'white' }) }}>{friend.name}</span>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>Preview</p>
+        </div>
+
         <div className="form-group">
           <label className="form-label">Theme color</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -528,15 +779,13 @@ export default function FriendProfile() {
             ))}
           </div>
         </div>
-        <div style={{ padding: 'var(--space-md)', borderRadius: 'var(--radius-md)', background: bannerColor, textAlign: 'center', ...(effect === 'glow' ? { boxShadow: `0 0 30px ${bannerColor}44` } : {}) }}>
-          <span style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 500, ...(effect === 'gradient' ? { background: 'linear-gradient(135deg,white,rgba(255,255,255,0.6))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' } : { color: 'white' }) }}>{friend.name}</span>
-        </div>
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={() => setShowCustomize(false)}>Cancel</button>
           <button className="btn btn-primary" onClick={() => setShowCustomize(false)}>Apply</button>
         </div>
       </Modal>
 
+      {/* Edit Contact */}
       <Modal open={showContactModal} onClose={() => setShowContactModal(false)} title="Edit contact info">
         {(['phone','email','instagram','twitter','linkedin','snapchat'] as const).map(field => (
           <div key={field} className="form-group">
@@ -549,6 +798,74 @@ export default function FriendProfile() {
           <button className="btn btn-primary" onClick={handleSaveContact} disabled={savingContact}>{savingContact ? 'Saving…' : 'Save'}</button>
         </div>
       </Modal>
+
+      {/* Delete Confirm — requires typing friend's name */}
+      <Modal open={showDeleteConfirm} onClose={() => { setShowDeleteConfirm(false); setDeleteNameInput('') }} title="Remove friend?">
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' }}>
+          This will permanently delete <strong>{friend.name}</strong> and all their associated data. This cannot be undone.
+        </p>
+        <div className="form-group">
+          <label className="form-label" style={{ color: 'var(--negative)' }}>Type <strong>{friend.name}</strong> to confirm</label>
+          <input
+            className="form-input"
+            placeholder={friend.name}
+            value={deleteNameInput}
+            onChange={e => setDeleteNameInput(e.target.value)}
+            style={{ borderColor: deleteNameInput === friend.name ? 'var(--negative)' : undefined }}
+            autoFocus
+          />
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={() => { setShowDeleteConfirm(false); setDeleteNameInput('') }}>Cancel</button>
+          <button
+            className="btn btn-primary"
+            style={{ background: 'var(--negative)', borderColor: 'var(--negative)', opacity: deleteNameInput === friend.name ? 1 : 0.4, cursor: deleteNameInput === friend.name ? 'pointer' : 'not-allowed' }}
+            disabled={deleteNameInput !== friend.name}
+            onClick={handleDeleteFriend}
+          >Delete forever</button>
+        </div>
+      </Modal>
+    </div>
+  )
+}
+
+function FactItem({ fact, onDelete, deletingId, accentColor, large }: {
+  fact: { id: string; category: string; value: string };
+  onDelete: (id: string) => void;
+  deletingId: string | null;
+  accentColor: string;
+  large?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: large ? '12px 14px' : '10px 12px',
+        background: 'var(--bg)', borderRadius: 'var(--radius-sm)',
+        position: 'relative', transition: 'background 0.15s',
+        border: hovered ? `1px solid ${accentColor}30` : '1px solid transparent',
+      }}
+    >
+      <div className="text-xs text-muted text-sans" style={{ marginBottom: 3 }}>{fact.category}</div>
+      <div style={{ fontSize: large ? '0.9rem' : '0.85rem', fontWeight: 500 }}>{fact.value}</div>
+      {hovered && (
+        <button
+          onClick={() => onDelete(fact.id)}
+          disabled={deletingId === fact.id}
+          style={{
+            position: 'absolute', top: 6, right: 6,
+            width: 20, height: 20, borderRadius: '50%',
+            background: 'var(--negative-bg)', border: 'none',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--negative)', padding: 0,
+          }}
+          title="Delete fact"
+        >
+          {deletingId === fact.id ? '…' : '×'}
+        </button>
+      )}
     </div>
   )
 }
@@ -558,18 +875,6 @@ function ContactRow({ icon, value, bg, color }: { icon: React.ReactNode; value: 
     <div className="flex items-center gap-sm">
       <div style={{ width: 26, height: 26, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>{icon}</div>
       <span style={{ fontSize: '0.82rem' }}>{value}</span>
-    </div>
-  )
-}
-
-function RingWidget({ value, color, label }: { value: number; color: string; label: string }) {
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ position: 'relative', width: 80, height: 80, margin: '0 auto 8px' }}>
-        <FreshnessRing percentage={value} color={color} size={80} trackColor="var(--border)" />
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: '1rem', color }}>{value}%</div>
-      </div>
-      <div className="text-xs text-muted text-sans">{label}</div>
     </div>
   )
 }
