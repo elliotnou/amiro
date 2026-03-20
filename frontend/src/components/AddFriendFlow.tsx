@@ -41,29 +41,27 @@ const MET_HOW_OPTIONS = ['School','Work','Mutual friend','Online','Neighborhood'
 
 export default function AddFriendFlow({ onClose, onSave }: Props) {
   const [step, setStep] = useState(0)
+
+  // Step 0 — Who
   const [name, setName] = useState('')
   const [color, setColor] = useState(COLORS[1])
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+
+  // Step 1 — Connection + Details
   const [tier, setTier] = useState<'inner-circle' | 'close-friend' | 'casual'>('casual')
   const [metHow, setMetHow] = useState('')
   const [metDate, setMetDate] = useState('')
   const [location, setLocation] = useState('')
   const [birthday, setBirthday] = useState('')
+
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [direction, setDirection] = useState<'forward' | 'back'>('forward')
-
   const fileRef = useRef<HTMLInputElement>(null)
 
   const initials = name.trim() ? getInitials(name) : '?'
-  const steps = ['Who?', 'Connection', 'Details']
-  const progress = ((step + 1) / steps.length) * 100
-
-  const goNext = () => { setDirection('forward'); setStep(prev => prev + 1) }
-  const goBack = () => { setDirection('back'); setStep(prev => prev - 1) }
 
   const handlePhotoSelect = async (file: File) => {
     setAvatarPreview(URL.createObjectURL(file))
@@ -72,8 +70,8 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
     try {
       const url = await uploadImage(file)
       setAvatarUrl(url)
-    } catch (e: unknown) {
-      setUploadError('Photo upload failed. Check Cloudinary config in .env')
+    } catch {
+      setUploadError('Upload failed — check Cloudinary config')
       setAvatarPreview(null)
     } finally {
       setUploading(false)
@@ -101,66 +99,64 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
     onClose()
   }
 
-  // ── overlay styles ──
   const overlay: React.CSSProperties = {
     position: 'fixed', inset: 0, zIndex: 1000,
-    background: 'rgba(0,0,0,0.55)',
-    backdropFilter: 'blur(12px)',
+    background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: '24px',
-    animation: 'fadeIn 200ms ease',
+    padding: '24px', animation: 'fadeIn 200ms ease',
+  }
+  const card: React.CSSProperties = {
+    background: 'var(--bg-card)', borderRadius: 'var(--radius-xl)',
+    boxShadow: '0 32px 80px rgba(0,0,0,0.3)',
+    width: '100%', maxWidth: 500, overflow: 'hidden',
+    animation: 'slideUp 280ms cubic-bezier(0.34,1.56,0.64,1)',
   }
 
-  const card: React.CSSProperties = {
-    background: 'var(--bg-card)',
-    borderRadius: 'var(--radius-xl)',
-    boxShadow: '0 32px 80px rgba(0,0,0,0.3)',
-    width: '100%', maxWidth: 520,
-    overflow: 'hidden',
-    animation: `${direction === 'forward' ? 'slideUp' : 'slideDown'} 280ms cubic-bezier(0.34,1.56,0.64,1)`,
-  }
+  const miniAvatar = (
+    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+      <div style={{ width: 52, height: 52, borderRadius: '50%', background: avatarPreview ? 'transparent' : color, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px var(--bg-card), 0 0 0 5px ${color}33` }}>
+        {avatarPreview
+          ? <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', color: 'white', fontWeight: 500 }}>{initials}</span>}
+      </div>
+    </div>
+  )
 
   return (
     <>
       <style>{`
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes slideUp { from { transform: translateY(24px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-        @keyframes slideDown { from { transform: translateY(-16px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
         @keyframes pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.04) } }
-        .tier-card:hover { transform: translateY(-2px); border-color: var(--accent) !important; }
+        .tier-btn:hover { transform: translateY(-2px); }
       `}</style>
 
       <div style={overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
         <div style={card}>
           {/* Progress bar */}
           <div style={{ height: 3, background: 'var(--border)' }}>
-            <div style={{ height: '100%', width: `${progress}%`, background: color, transition: 'width 400ms ease, background 300ms ease' }} />
+            <div style={{ height: '100%', width: step === 0 ? '50%' : '100%', background: color, transition: 'width 400ms ease, background 300ms ease' }} />
           </div>
 
-          {/* Step header */}
-          <div style={{ padding: '20px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Header */}
+          <div style={{ padding: '16px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: 6 }}>
-              {steps.map((_label, i) => (
-                <div key={i} style={{
-                  width: i === step ? 20 : 6, height: 6,
-                  borderRadius: 'var(--radius-full)',
-                  background: i <= step ? color : 'var(--border)',
-                  transition: 'all 300ms ease',
-                }} />
+              {[0,1].map(i => (
+                <div key={i} style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 'var(--radius-full)', background: i <= step ? color : 'var(--border)', transition: 'all 300ms ease' }} />
               ))}
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.2rem', padding: 4, lineHeight: 1 }}>×</button>
           </div>
 
-          {/* ═══ STEP 0: WHO ═══ */}
+          {/* ── STEP 0: WHO ── */}
           {step === 0 && (
-            <div style={{ padding: '24px 28px 28px' }}>
-              {/* Live avatar preview */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28 }}>
+            <div style={{ padding: '20px 24px 24px' }}>
+              {/* Big live avatar */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
                 <div
                   onClick={() => fileRef.current?.click()}
                   style={{
-                    width: 110, height: 110, borderRadius: '50%',
+                    width: 108, height: 108, borderRadius: '50%',
                     background: avatarPreview ? 'transparent' : color,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', position: 'relative', overflow: 'hidden',
@@ -169,178 +165,118 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
                     animation: name.trim() ? 'pulse 2s ease-in-out infinite' : 'none',
                   }}
                 >
-                  {avatarPreview ? (
-                    <img src={avatarPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <span style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', fontWeight: 500, color: 'white' }}>{initials}</span>
-                  )}
-                  <div style={{
-                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: 0, transition: 'opacity 200ms',
-                    color: 'white', fontSize: '0.7rem', fontFamily: 'var(--font-sans)',
-                  }}
-                    className="avatar-overlay"
+                  {avatarPreview
+                    ? <img src={avatarPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', fontWeight: 500, color: 'white' }}>{initials}</span>}
+                  <div
+                    style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 200ms', color: 'white', fontSize: '0.72rem', fontFamily: 'var(--font-sans)' }}
                     onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
                     onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
                   >
                     {uploading ? '⏳' : '+ photo'}
                   </div>
                 </div>
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-                  onChange={e => e.target.files?.[0] && handlePhotoSelect(e.target.files[0])} />
-                {uploading && <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 8 }}>Uploading…</p>}
+                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handlePhotoSelect(e.target.files[0])} />
                 {uploadError && <p style={{ fontSize: '0.72rem', color: '#dc2626', fontFamily: 'var(--font-sans)', marginTop: 8 }}>{uploadError}</p>}
                 {avatarUrl && !uploading && <p style={{ fontSize: '0.72rem', color: 'var(--positive)', fontFamily: 'var(--font-sans)', marginTop: 8 }}>✓ Photo saved</p>}
               </div>
 
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 500, marginBottom: 6, textAlign: 'center' }}>
-                Who are you adding?
-              </h2>
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 24 }}>
-                Tap the circle to add a photo, or just start with initials.
-              </p>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.45rem', fontWeight: 500, marginBottom: 4, textAlign: 'center' }}>Who are you adding?</h2>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 20 }}>Tap the circle to add a photo.</p>
 
               <input
-                autoFocus
-                className="form-input"
+                autoFocus className="form-input"
                 placeholder="Full name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && name.trim() && goNext()}
-                style={{ fontSize: '1.1rem', textAlign: 'center', fontFamily: 'var(--font-serif)', marginBottom: 20, letterSpacing: '0.01em' }}
+                value={name} onChange={e => setName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && name.trim() && setStep(1)}
+                style={{ fontSize: '1.1rem', textAlign: 'center', fontFamily: 'var(--font-serif)', marginBottom: 18 }}
               />
 
-              {/* Color swatches */}
-              <div style={{ marginBottom: 28 }}>
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, textAlign: 'center' }}>Pick a colour</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {COLORS.map(c => (
-                    <button key={c} onClick={() => setColor(c)} style={{
-                      width: 28, height: 28, borderRadius: '50%', background: c, padding: 0, cursor: 'pointer',
-                      border: color === c ? '3px solid var(--text)' : '3px solid transparent',
-                      transform: color === c ? 'scale(1.2)' : 'scale(1)',
-                      transition: 'all 200ms ease', outline: 'none',
-                    }} />
-                  ))}
-                </div>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, textAlign: 'center' }}>Pick a colour</p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 24 }}>
+                {COLORS.map(c => (
+                  <button key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, padding: 0, cursor: 'pointer', border: color === c ? '3px solid var(--text)' : '3px solid transparent', transform: color === c ? 'scale(1.2)' : 'scale(1)', transition: 'all 200ms ease', outline: 'none' }} />
+                ))}
               </div>
 
-              <button className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '0.95rem' }} onClick={goNext} disabled={!name.trim()}>
+              <button className="btn btn-primary" style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }} onClick={() => setStep(1)} disabled={!name.trim()}>
                 Continue →
               </button>
             </div>
           )}
 
-          {/* ═══ STEP 1: CONNECTION ═══ */}
+          {/* ── STEP 1: CONNECTION + DETAILS ── */}
           {step === 1 && (
-            <div style={{ padding: '24px 28px 28px' }}>
-              {/* Mini avatar */}
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-                <div style={{ width: 52, height: 52, borderRadius: '50%', background: avatarPreview ? 'transparent' : color, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px var(--bg-card), 0 0 0 5px ${color}33` }}>
-                  {avatarPreview ? <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', color: 'white', fontWeight: 500 }}>{initials}</span>}
-                </div>
-              </div>
+            <div style={{ padding: '20px 24px 24px', maxHeight: '80vh', overflowY: 'auto' }}>
+              {miniAvatar}
 
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 500, marginBottom: 4, textAlign: 'center' }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', fontWeight: 500, marginBottom: 3, textAlign: 'center' }}>
                 How do you know {name.split(' ')[0]}?
               </h2>
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 24 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 20 }}>
                 Where do they fit in your world?
               </p>
 
-              {/* Tier cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 22 }}>
+              {/* Tier */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
                 {TIERS.map(t => (
-                  <button key={t.key} className="tier-card" onClick={() => setTier(t.key)} style={{
-                    padding: '14px 16px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                  <button key={t.key} className="tier-btn" onClick={() => setTier(t.key)} style={{
+                    padding: '12px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
                     border: `2px solid ${tier === t.key ? tierColor(t.key) : 'var(--border)'}`,
                     background: tier === t.key ? `${tierColor(t.key)}10` : 'var(--bg)',
-                    textAlign: 'left', transition: 'all 200ms ease',
-                    display: 'flex', alignItems: 'center', gap: 14,
+                    textAlign: 'left', transition: 'all 200ms ease', display: 'flex', alignItems: 'center', gap: 12,
                   }}>
-                    <span style={{ fontSize: '1.4rem', color: tierColor(t.key), flexShrink: 0, width: 28, textAlign: 'center' }}>{t.emoji}</span>
+                    <span style={{ fontSize: '1.2rem', color: tierColor(t.key), flexShrink: 0, width: 24, textAlign: 'center' }}>{t.emoji}</span>
                     <div>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.88rem', color: tier === t.key ? tierColor(t.key) : 'var(--text)', marginBottom: 2 }}>{tierLabel(t.key)}</div>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.desc}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.85rem', color: tier === t.key ? tierColor(t.key) : 'var(--text)', marginBottom: 1 }}>{tierLabel(t.key)}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t.desc}</div>
                     </div>
                   </button>
                 ))}
               </div>
 
-              {/* How / when you met */}
-              <div style={{ marginBottom: 12 }}>
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>How did you meet?</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {MET_HOW_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => setMetHow(metHow === opt ? '' : opt)} style={{
-                      padding: '6px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)', fontSize: '0.78rem',
-                      border: `1.5px solid ${metHow === opt ? color : 'var(--border)'}`,
-                      background: metHow === opt ? `${color}15` : 'transparent',
-                      color: metHow === opt ? color : 'var(--text-secondary)',
-                      transition: 'all 180ms ease', fontWeight: metHow === opt ? 600 : 400,
-                    }}>{opt}</button>
-                  ))}
+              {/* How you met */}
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>How did you meet?</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                {MET_HOW_OPTIONS.map(opt => (
+                  <button key={opt} onClick={() => setMetHow(metHow === opt ? '' : opt)} style={{
+                    padding: '5px 11px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)', fontSize: '0.76rem',
+                    border: `1.5px solid ${metHow === opt ? color : 'var(--border)'}`,
+                    background: metHow === opt ? `${color}15` : 'transparent',
+                    color: metHow === opt ? color : 'var(--text-secondary)',
+                    transition: 'all 180ms ease', fontWeight: metHow === opt ? 600 : 400,
+                  }}>{opt}</button>
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">When you met</label>
+                  <input className="form-input" type="date" value={metDate} onChange={e => setMetDate(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Birthday</label>
+                  <input className="form-input" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} />
                 </div>
               </div>
-
-              <div className="form-group" style={{ marginBottom: 22 }}>
-                <label className="form-label">When did you meet?</label>
-                <input className="form-input" type="date" value={metDate} onChange={e => setMetDate(e.target.value)} />
-              </div>
-
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn btn-ghost" style={{ flex: 1, padding: '12px' }} onClick={goBack}>← Back</button>
-                <button className="btn btn-primary" style={{ flex: 2, padding: '12px', background: color, borderColor: color }} onClick={goNext}>Continue →</button>
-              </div>
-            </div>
-          )}
-
-          {/* ═══ STEP 2: DETAILS ═══ */}
-          {step === 2 && (
-            <div style={{ padding: '24px 28px 28px' }}>
-              {/* Mini avatar */}
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-                <div style={{ width: 52, height: 52, borderRadius: '50%', background: avatarPreview ? 'transparent' : color, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px var(--bg-card), 0 0 0 5px ${color}33` }}>
-                  {avatarPreview ? <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', color: 'white', fontWeight: 500 }}>{initials}</span>}
-                </div>
-              </div>
-
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 500, marginBottom: 4, textAlign: 'center' }}>
-                A little more about {name.split(' ')[0]}
-              </h2>
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 24 }}>
-                All optional — you can always fill these in later.
-              </p>
 
               <div className="form-group">
                 <label className="form-label">Where are they based?</label>
-                <input className="form-input" placeholder="City, State or Country" value={location} onChange={e => setLocation(e.target.value)} />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Birthday</label>
-                <input className="form-input" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} />
+                <input className="form-input" placeholder="City or country" value={location} onChange={e => setLocation(e.target.value)} />
               </div>
 
               {saveError && (
-                <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: '#dc2626', marginBottom: 'var(--space-md)' }}>
+                <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: '#dc2626', marginBottom: 12 }}>
                   {saveError}
                 </div>
               )}
 
-              {/* Final CTA */}
-              <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                <button className="btn btn-ghost" style={{ flex: 1, padding: '12px' }} onClick={goBack}>← Back</button>
+              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                <button className="btn btn-ghost" style={{ flex: 1, padding: '12px' }} onClick={() => setStep(0)}>← Back</button>
                 <button
-                  onClick={handleSave}
-                  disabled={saving || uploading}
-                  style={{
-                    flex: 2, padding: '14px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
-                    background: color, color: 'white', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.95rem',
-                    opacity: (saving || uploading) ? 0.6 : 1, transition: 'opacity 200ms',
-                  }}
+                  onClick={handleSave} disabled={saving || uploading}
+                  style={{ flex: 2, padding: '13px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', background: color, color: 'white', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.94rem', opacity: (saving || uploading) ? 0.6 : 1, transition: 'opacity 200ms' }}
                 >
                   {saving ? 'Adding…' : `Add ${name.split(' ')[0]} ✦`}
                 </button>

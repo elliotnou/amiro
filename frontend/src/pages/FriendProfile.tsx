@@ -6,8 +6,13 @@ import { useImpressions } from '../lib/hooks/useImpressions'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import LoadingScreen from '../components/LoadingScreen'
 import Modal from '../components/Modal'
+import RelationshipRadar from '../components/RelationshipRadar'
+import { computeRadarScores } from '../lib/friendScores'
+import { uploadImage } from '../lib/cloudinary'
 import { IconArrowLeft, IconPhone, IconMail, IconLink, IconPaintbrush } from '../components/Icons'
 import { tierLabel, tierColor } from '../data/mock'
+
+const MET_HOW_OPTIONS = ['School','Work','Mutual friend','Online','Neighborhood','Event','Travel','Family','Other']
 
 type Tab = 'overview' | 'impressions' | 'gallery' | 'gifts'
 
@@ -28,7 +33,7 @@ function FreshnessRing({ percentage, color, size = 140, trackColor }: { percenta
 
 export default function FriendProfile() {
   const { id } = useParams()
-  const { friend, loading, addFact, addNote, upsertContact } = useFriend(id)
+  const { friend, loading, addFact, addNote, upsertContact, updateFriend } = useFriend(id)
   const { impressions, createImpression } = useImpressions(id)
   const { hangouts } = useHangouts()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
@@ -37,9 +42,64 @@ export default function FriendProfile() {
   const [showImpressionModal, setShowImpressionModal] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
   const [showCustomize, setShowCustomize] = useState(false)
+  const [customizeTab, setCustomizeTab] = useState<'info' | 'style'>('info')
   const [themeColor, setThemeColor] = useState<string | null>(null)
   const [profileFont, setProfileFont] = useState('default')
   const [effect, setEffect] = useState('none')
+
+  // Editable info fields (initialized on open)
+  const [editName, setEditName] = useState('')
+  const [editLocation, setEditLocation] = useState('')
+  const [editBirthday, setEditBirthday] = useState('')
+  const [editMetHow, setEditMetHow] = useState('')
+  const [editMetDate, setEditMetDate] = useState('')
+  const [editTier, setEditTier] = useState<'inner-circle' | 'close-friend' | 'casual'>('casual')
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null)
+  const [editAvatarUrl, setEditAvatarUrl] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [savingInfo, setSavingInfo] = useState(false)
+  const editPhotoRef = useRef<HTMLInputElement>(null)
+
+  const openCustomize = () => {
+    if (!friend) return
+    setEditName(friend.name)
+    setEditLocation(friend.location || '')
+    setEditBirthday(friend.birthday || '')
+    setEditMetHow(friend.met_how || '')
+    setEditMetDate(friend.met_date || '')
+    setEditTier(friend.tier)
+    setEditAvatarPreview(friend.avatar_url || null)
+    setEditAvatarUrl(friend.avatar_url || null)
+    setCustomizeTab('info')
+    setShowCustomize(true)
+  }
+
+  const handleEditPhoto = async (file: File) => {
+    setEditAvatarPreview(URL.createObjectURL(file))
+    setUploadingAvatar(true)
+    try {
+      const url = await uploadImage(file)
+      setEditAvatarUrl(url)
+    } catch { /* no-op */ } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const handleSaveInfo = async () => {
+    setSavingInfo(true)
+    await updateFriend({
+      name: editName.trim() || friend!.name,
+      initials: (editName.trim() || friend!.name).trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0,2),
+      location: editLocation || null,
+      birthday: editBirthday || null,
+      met_how: editMetHow || null,
+      met_date: editMetDate || null,
+      tier: editTier,
+      avatar_url: editAvatarUrl,
+    })
+    setSavingInfo(false)
+    setShowCustomize(false)
+  }
 
   // Fact modal state
   const [factCategory, setFactCategory] = useState('')
@@ -73,13 +133,22 @@ export default function FriendProfile() {
   const friendHangouts = hangouts.filter(h => h.hangout_friends.some(hf => hf.friend_id === id))
   const tabs: Tab[] = ['overview', 'impressions', 'gallery', 'gifts']
   const freshness = Math.max(10, Math.min(95, 100 - Math.floor(friend.day_count / 40)))
-  const closeness = Math.min(100, Math.floor((friend.hangout_count / 25) * 100))
   const tColor = tierColor(friend.tier)
   const bannerColor = themeColor || friend.avatar_color
   const fontFamily = profileFont === 'mono' ? "'SF Mono', 'Fira Code', monospace"
     : profileFont === 'sans' ? 'var(--font-sans)' : undefined
 
   const colorSwatches = [friend.avatar_color,'#e07a5f','#457b9d','#c9a96e','#7c6fbd','#4a7deb','#2d6a4f','#d4a373','#e76f51','#264653','#6d597a']
+
+  // Relationship radar scores — pure math, no AI
+  const radarScores = computeRadarScores({
+    hangouts: friendHangouts.map(h => ({ date: h.date })),
+    hangoutCount: friend.hangout_count,
+    noteCount: friend.notes.length,
+    impressionCount: impressions.length,
+    factCount: friend.facts.length,
+    contact: friend.contact,
+  })
 
   const handleSaveFact = async () => {
     const cat = factCategory === '__custom' ? factCustomCat : factCategory
@@ -193,7 +262,7 @@ export default function FriendProfile() {
             {[
               { label: 'Hangouts', value: friend.hangout_count },
               { label: 'Notes', value: friend.notes.length },
-              { label: 'Closeness', value: `${closeness}%` },
+              { label: 'Closeness', value: `${radarScores.closeness}%` },
             ].map(stat => (
               <div key={stat.label} style={{ textAlign: 'center' }}>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.6rem', fontWeight: 600, color: 'white', lineHeight: 1 }}>{stat.value}</div>
@@ -264,18 +333,14 @@ export default function FriendProfile() {
               </div>
             </div>
 
-            {/* RIGHT */}
+            {/* RIGHT — Relationship Radar */}
             <div className="flex flex-col gap-md">
-              <div className="card" style={{ display: 'flex', gap: 20, justifyContent: 'center', padding: 'var(--space-lg)' }}>
-                <RingWidget value={freshness} color={friend.avatar_color} label="Freshness" />
-                <RingWidget value={closeness} color={tColor} label="Closeness" />
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', flexDirection: 'column' }}>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: '1.2rem', lineHeight: 1 }}>{friend.hangout_count}</div>
-                    <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 2 }}>hangouts</div>
-                  </div>
-                  <div className="text-xs text-muted text-sans">Total</div>
+              <div className="card" style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div className="flex items-center justify-between" style={{ width: '100%', marginBottom: 4 }}>
+                  <span className="section-label-sm">Relationship radar</span>
+                  <span className="text-xs text-muted text-sans">pure math</span>
                 </div>
+                <RelationshipRadar scores={radarScores} color={friend.avatar_color} size={200} />
               </div>
 
               <div className="card">

@@ -193,18 +193,21 @@ export default function Home() {
         </div>
       )}
 
-      {/* Monthly hangout chart */}
-      {hangouts.length > 0 && (
-        <div className="section animate-in animate-in-3">
-          <div className="section-header">
-            <span className="section-label">Monthly hangouts</span>
-            <span className="text-xs text-muted text-sans">{hangouts.length} total</span>
-          </div>
-          <div className="card" style={{ padding: 'var(--space-lg) var(--space-lg) var(--space-sm)' }}>
-            <MonthlyChart hangouts={hangouts} />
-          </div>
+      {/* Monthly hangout chart — always visible */}
+      <div className="section animate-in animate-in-3">
+        <div className="section-header">
+          <span className="section-label">Monthly hangouts</span>
+          <span className="text-xs text-muted text-sans">{hangouts.length} total</span>
         </div>
-      )}
+        <div className="card" style={{ padding: 'var(--space-lg) var(--space-lg) var(--space-sm)' }}>
+          <MonthlyChart hangouts={hangouts} />
+          {hangouts.length === 0 && (
+            <p style={{ textAlign: 'center', fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 8, marginBottom: 4 }}>
+              Log your first hangout to start tracking
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Recent hangouts */}
       {recentHangouts.length > 0 && (
