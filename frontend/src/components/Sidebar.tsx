@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom'
-import { IconHome, IconUsers, IconCalendar, IconChart, IconSparkle, IconSettings, LogoIcon } from './Icons'
+import { IconHome, IconUsers, IconCalendar, IconChart, IconSparkle, IconSettings, IconGroups, LogoIcon } from './Icons'
 import { useAuth } from '../lib/auth'
 import { useFriends } from '../lib/hooks/useFriends'
 import { useHangouts } from '../lib/hooks/useHangouts'
@@ -9,6 +9,7 @@ import { useSubscription } from '../lib/hooks/useSubscription'
 const navItems = [
   { to: '/home', label: 'Home', Icon: IconHome },
   { to: '/friends', label: 'Friends', Icon: IconUsers },
+  { to: '/groups', label: 'Groups', Icon: IconGroups },
   { to: '/hangouts', label: 'Hangouts', Icon: IconCalendar },
   { to: '/stats', label: 'Stats', Icon: IconChart },
 ]
@@ -82,14 +83,6 @@ export default function Sidebar() {
               {!collapsed && item.label}
             </NavLink>
           ))}
-          <NavLink
-            to="/ai"
-            className={({ isActive }) => `sidebar-link ai-link ${isActive ? 'active' : ''}`}
-            title={collapsed ? 'AI Assistant' : undefined}
-          >
-            <span className="link-icon"><IconSparkle size={18} /></span>
-            {!collapsed && 'AI Assistant'}
-          </NavLink>
         </nav>
 
         {!collapsed && (

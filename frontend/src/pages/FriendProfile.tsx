@@ -15,6 +15,8 @@ import { tierLabel, tierColor } from '../data/mock'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import { useGallery } from '../lib/hooks/useGallery'
+import { useSubscription } from '../lib/hooks/useSubscription'
+import { callAI, buildFriendContext, PROMPTS } from '../lib/ai'
 
 const MET_HOW_OPTIONS = ['School','Work','Mutual friend','Online','Neighborhood','Event','Travel','Family','Other']
 
@@ -50,7 +52,7 @@ function IconExpand({ size = 14 }: { size?: number }) {
   )
 }
 
-type Tab = 'overview' | 'impressions' | 'gallery' | 'gifts'
+type Tab = 'overview' | 'impressions' | 'gallery' | 'gifts' | 'ai'
 
 function FreshnessRing({ percentage, color, size = 140, trackColor }: { percentage: number; color: string; size?: number; trackColor?: string }) {
   const strokeWidth = size > 100 ? 8 : 6
@@ -69,8 +71,7 @@ function FreshnessRing({ percentage, color, size = 140, trackColor }: { percenta
 
 function InnerLabel({ children, style, accent }: { children: React.ReactNode; style?: React.CSSProperties; accent?: string }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontSize: '0.64rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', ...style as object }}>
-      {accent && <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, flexShrink: 0, opacity: 0.7 }} />}
+    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.66rem', fontWeight: 700, color: accent || 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', ...style as object }}>
       {children}
     </span>
   )
@@ -81,9 +82,17 @@ export default function FriendProfile() {
   const navigate = useNavigate()
   const { friend, loading, addFact, deleteFact, addNote, upsertContact, updateFriend } = useFriend(id)
   const { deleteFriend } = useFriends()
-  const { impressions, createImpression } = useImpressions(id)
+  const { impressions, createImpression, deleteImpression } = useImpressions(id)
   const { hangouts } = useHangouts()
+  const { status: subStatus } = useSubscription()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
+
+  // ── AI chat state ──
+  type ChatMsg = { role: 'user' | 'assistant'; text: string }
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const chatBottomRef = useRef<HTMLDivElement>(null)
 
   // ── Modal visibility ──
   const [showFactModal, setShowFactModal] = useState(false)
@@ -137,6 +146,7 @@ export default function FriendProfile() {
   const [interestInput, setInterestInput] = useState('')
   const [showInterestInput, setShowInterestInput] = useState(false)
   const editPhotoRef = useRef<HTMLInputElement>(null)
+  const factsPanelMousedown = useRef(false)
 
   const openEditInfo = () => {
     if (!friend) return
@@ -194,6 +204,8 @@ export default function FriendProfile() {
   // ── Impression modal state ──
   const [impTitle, setImpTitle] = useState('')
   const [impBody, setImpBody] = useState('')
+  const [openImpressionId, setOpenImpressionId] = useState<string | null>(null)
+  const [confirmDeleteImpId, setConfirmDeleteImpId] = useState<string | null>(null)
   const [savingImp, setSavingImp] = useState(false)
 
   // ── Contact modal state ──
@@ -229,7 +241,26 @@ export default function FriendProfile() {
   if (loading) return <LoadingScreen />
   if (!friend) return <div className="page-container"><p style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>Friend not found.</p></div>
 
-  const tabs: Tab[] = ['overview', 'impressions', 'gallery', 'gifts']
+  const tabs: Tab[] = ['overview', 'impressions', 'gallery', 'gifts', 'ai']
+
+  const friendContext = friend ? buildFriendContext(friend, friendHangouts) : ''
+
+  const handleChatSend = async () => {
+    if (!chatInput.trim() || chatLoading) return
+    const question = chatInput.trim()
+    const history = chatMessages.map(m => `${m.role === 'user' ? 'You' : 'Assistant'}: ${m.text}`).join('\n')
+    setChatMessages(prev => [...prev, { role: 'user', text: question }])
+    setChatInput('')
+    setChatLoading(true)
+    try {
+      const answer = await callAI(PROMPTS.friendQuery(friendContext, history, question))
+      setChatMessages(prev => [...prev, { role: 'assistant', text: answer }])
+    } catch (e: any) {
+      setChatMessages(prev => [...prev, { role: 'assistant', text: e.message === 'upgrade_required' ? '__upgrade__' : 'Something went wrong. Try again.' }])
+    }
+    setChatLoading(false)
+    setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+  }
   const freshness = daysSinceContact != null
     ? Math.max(5, 100 - Math.floor(daysSinceContact / 4))
     : 50
@@ -560,10 +591,11 @@ export default function FriendProfile() {
             <div className="animate-in">
               <button className="btn btn-default" onClick={() => setShowImpressionModal(true)} style={{ marginBottom: 'var(--space-lg)' }}>Write an impression</button>
               {impressions.length > 0 ? impressions.map(imp => (
-                <div key={imp.id} className="impression" style={{ borderLeftColor: bannerColor }}>
-                  <div className="impression-title">{imp.title}</div>
-                  <div className="impression-date">{imp.date}</div>
-                  <div className="impression-body">{imp.body}</div>
+                <div key={imp.id} className="impression" style={{ borderLeftColor: bannerColor, cursor: 'pointer' }} onClick={() => { setOpenImpressionId(imp.id); setConfirmDeleteImpId(null) }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+                    <div className="impression-title">{imp.title}</div>
+                    <div className="impression-date" style={{ flexShrink: 0 }}>{imp.date}</div>
+                  </div>
                 </div>
               )) : (
                 <div className="empty-state"><p>No impressions yet. Write one — it's just for you.</p></div>
@@ -638,6 +670,81 @@ export default function FriendProfile() {
             </div>
           )}
 
+          {/* AI CHAT */}
+          {activeTab === 'ai' && (
+            <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', height: 480 }}>
+              {subStatus !== 'active' ? (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: 16, opacity: 0.3 }}>✦</div>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', fontWeight: 500, marginBottom: 8 }}>Pro only</h3>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 24, maxWidth: 280 }}>
+                    Ask anything about {friend.name} — their interests, when you last hung out, what to talk about.
+                  </p>
+                  <Link to="/upgrade" className="btn btn-primary" style={{ padding: '10px 22px' }}>Upgrade to Pro</Link>
+                </div>
+              ) : (
+                <>
+                  {/* Messages */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {chatMessages.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                        Ask anything about {friend.name}…
+                      </div>
+                    )}
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                        {msg.text === '__upgrade__' ? (
+                          <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: 'var(--radius-lg)', background: 'var(--bg)', border: '1px solid var(--border)', fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                            <Link to="/upgrade" style={{ color: bannerColor, fontWeight: 600 }}>Upgrade to Pro</Link> to use AI features.
+                          </div>
+                        ) : (
+                          <div style={{
+                            maxWidth: '80%', padding: '10px 14px',
+                            borderRadius: 'var(--radius-lg)',
+                            background: msg.role === 'user' ? bannerColor : 'var(--bg)',
+                            border: msg.role === 'user' ? 'none' : '1px solid var(--border)',
+                            color: msg.role === 'user' ? 'white' : 'var(--text)',
+                            fontFamily: 'var(--font-serif)', fontSize: '0.9rem', lineHeight: 1.7,
+                          }}>
+                            {msg.text}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {chatLoading && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                        <div style={{ padding: '10px 16px', borderRadius: 'var(--radius-lg)', background: 'var(--bg)', border: '1px solid var(--border)', fontFamily: 'var(--font-sans)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          thinking…
+                        </div>
+                      </div>
+                    )}
+                    <div ref={chatBottomRef} />
+                  </div>
+
+                  {/* Input */}
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', gap: 8 }}>
+                    <input
+                      className="form-input"
+                      placeholder={`Ask about ${friend.name}…`}
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleChatSend()}
+                      style={{ flex: 1, fontSize: '0.88rem' }}
+                      disabled={chatLoading}
+                    />
+                    <button
+                      onClick={handleChatSend}
+                      disabled={!chatInput.trim() || chatLoading}
+                      style={{ padding: '8px 16px', borderRadius: 'var(--radius-md)', border: 'none', background: bannerColor, color: 'white', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', opacity: (!chatInput.trim() || chatLoading) ? 0.5 : 1, flexShrink: 0 }}
+                    >
+                      Send
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
         </div>{/* end tab content */}
       </div>{/* end unified card */}
 
@@ -672,7 +779,7 @@ export default function FriendProfile() {
           position: 'fixed', inset: 0, zIndex: 200,
           background: 'var(--bg-modal-backdrop)', display: 'flex', alignItems: 'flex-end',
           justifyContent: 'center',
-        }} onClick={() => setShowFactsPanel(false)}>
+        }} onMouseDown={(e) => { factsPanelMousedown.current = e.target === e.currentTarget }} onClick={(e) => { if (e.target === e.currentTarget && factsPanelMousedown.current) setShowFactsPanel(false) }}>
           <div style={{
             width: '100%', maxWidth: 640, background: 'var(--bg-card)',
             borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
@@ -733,6 +840,31 @@ export default function FriendProfile() {
           <button className="btn btn-primary" onClick={handleSaveImpression} disabled={savingImp || !impBody.trim()}>{savingImp ? 'Saving…' : 'Save'}</button>
         </div>
       </Modal>
+
+      {/* ── View Impression Modal ── */}
+      {(() => {
+        const imp = impressions.find(i => i.id === openImpressionId)
+        if (!imp) return null
+        const isConfirming = confirmDeleteImpId === imp.id
+        return (
+          <Modal open={true} onClose={() => { setOpenImpressionId(null); setConfirmDeleteImpId(null) }} title={imp.title}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 'var(--space-lg)' }}>{imp.date}</p>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.97rem', lineHeight: 1.9, color: 'var(--text)', whiteSpace: 'pre-wrap', marginBottom: 'var(--space-xl)' }}>{imp.body}</div>
+            <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
+              {isConfirming ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Delete this impression?</span>
+                  <button className="btn btn-ghost" style={{ color: '#dc2626', fontWeight: 600 }} onClick={() => { deleteImpression(imp.id); setOpenImpressionId(null); setConfirmDeleteImpId(null) }}>Yes, delete</button>
+                  <button className="btn btn-ghost" onClick={() => setConfirmDeleteImpId(null)}>Cancel</button>
+                </div>
+              ) : (
+                <button className="btn btn-ghost" style={{ color: 'var(--text-muted)' }} onClick={() => setConfirmDeleteImpId(imp.id)}>Delete</button>
+              )}
+              <button className="btn btn-ghost" onClick={() => { setOpenImpressionId(null); setConfirmDeleteImpId(null) }}>Close</button>
+            </div>
+          </Modal>
+        )
+      })()}
 
       {/* ── Edit Info Modal ── */}
       <Modal open={showEditInfo} onClose={() => setShowEditInfo(false)} title="Edit profile info">

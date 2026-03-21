@@ -78,4 +78,7 @@ export const PROMPTS = {
   globalQuery: (ctx: string, question: string) => `Here is my friend network:\n${ctx}\n\nMy question: ${question}\n\nAnswer based on what you know about my friends. Be specific — reference actual names and details from the data above.`,
 
   friendshipStory: (ctx: string, vibe: string) => `Here is context about my friend:\n${ctx}\n\nWrite a friendship story/narrative about our relationship together. Vibe: ${vibe}.\n\nGuidelines:\n- Write in first person ("I", "we")\n- Reference specific facts, hangouts, notes, and memories from the data\n- Make it feel genuine and personal, not generic\n- 3-4 paragraphs, flowing prose (not bullet points)\n- Capture the essence of the friendship — the highs, the texture of the relationship, what makes it special\n- Wholesome vibe: warm, heartfelt, appreciative tone\n- Funny vibe: playful, self-aware, inside-joke energy\n- Reflective vibe: introspective, meaningful, a bit poetic\n- Epic vibe: dramatic storytelling, like an adventure memoir\n- Raw vibe: honest, unfiltered, real talk`,
+
+  friendQuery: (ctx: string, history: string, question: string) =>
+    `You are a thoughtful assistant helping someone reflect on a friendship. Here is context about their friend:\n${ctx}\n${history ? `\nConversation so far:\n${history}\n` : ''}Their question: ${question}\n\nAnswer warmly and personally, referencing specific details from the context where relevant. Be concise.`,
 }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import { useFriends } from '../lib/hooks/useFriends'
+import { useFriendGroups } from '../lib/hooks/useFriendGroups'
 import { feelings } from '../data/mock'
 import { uploadImage } from '../lib/cloudinary'
 import { supabase } from '../lib/supabase'
@@ -219,6 +220,7 @@ function HangoutsCalendar({ hangouts, bannerMap }: { hangouts: ReturnType<typeof
 export default function Hangouts() {
   const { hangouts, loading, createHangout } = useHangouts()
   const { friends } = useFriends()
+  const { groups } = useFriendGroups()
   const { user } = useAuth()
   const [showLogModal, setShowLogModal] = useState(false)
   const [view, setView] = useState<'list' | 'calendar'>('list')
@@ -319,10 +321,10 @@ export default function Hangouts() {
             <h1 className="page-title" style={{ marginBottom: 4 }}>Hangouts</h1>
             <p className="page-subtitle">{hangouts.length} {hangouts.length === 1 ? 'memory' : 'memories'} logged</p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ display: 'flex', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 3, gap: 2 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 2 }}>
               {([{ v: 'list', Icon: IconList }, { v: 'calendar', Icon: IconCalendar }] as const).map(({ v, Icon }) => (
-                <button key={v} onClick={() => setView(v)} title={v === 'list' ? 'List view' : 'Calendar view'} style={{ width: 32, height: 32, border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: view === v ? 'var(--text)' : 'transparent', color: view === v ? 'var(--bg)' : 'var(--text-muted)', transition: 'all 0.18s' }}>
+                <button key={v} onClick={() => setView(v)} title={v === 'list' ? 'List view' : 'Calendar view'} style={{ width: 34, height: 34, border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: view === v ? 'var(--bg-active)' : 'transparent', color: view === v ? 'var(--text)' : 'var(--text-muted)', transition: 'all 0.18s' }}>
                   <Icon size={15} />
                 </button>
               ))}
@@ -380,85 +382,76 @@ export default function Hangouts() {
           {hangouts.map(h => {
             const banner = bannerMap[h.id]
             const accent = typeAccent(h.type)
+            const hasBanner = !!banner
+            const textColor = hasBanner ? 'white' : 'var(--text)'
+            const mutedColor = hasBanner ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)'
 
-            if (banner) {
-              // ── Photo card ──────────────────────────────
-              return (
-                <Link key={h.id} to={`/hangouts/${h.id}`} style={{
-                  display: 'block', borderRadius: 'var(--radius-xl)', overflow: 'hidden',
-                  aspectRatio: '4/3', position: 'relative', textDecoration: 'none',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.12)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0,
-                }}>
-                  <img src={banner} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.78) 100%)' }} />
+            return (
+              <Link key={h.id} to={`/hangouts/${h.id}`} style={{
+                display: 'flex', flexDirection: 'column',
+                borderRadius: 'var(--radius-xl)', overflow: 'hidden',
+                textDecoration: 'none',
+                border: hasBanner ? '1px solid rgba(255,255,255,0.08)' : '1px solid var(--border)',
+                background: hasBanner ? 'transparent' : 'var(--bg-card)',
+                boxShadow: hasBanner ? '0 4px 20px rgba(0,0,0,0.12)' : 'var(--shadow-sm)',
+                transition: 'box-shadow 180ms, transform 180ms',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = hasBanner ? '0 8px 28px rgba(0,0,0,0.18)' : 'var(--shadow-md)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = hasBanner ? '0 4px 20px rgba(0,0,0,0.12)' : 'var(--shadow-sm)' }}
+              >
+                {/* Header area */}
+                <div style={{ position: 'relative', height: 130, flexShrink: 0, overflow: 'hidden', background: hasBanner ? 'transparent' : `linear-gradient(140deg, ${accent}20 0%, ${accent}08 100%)` }}>
+                  {hasBanner && <img src={banner} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                  {hasBanner && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%)' }} />}
 
                   {/* Type badge */}
                   <div style={{
-                    position: 'absolute', top: 14, left: 14,
-                    background: 'rgba(0,0,0,0.32)', backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.18)',
-                    borderRadius: 'var(--radius-full)', padding: '4px 11px',
-                    color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.64rem',
-                    fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+                    position: 'absolute', top: 12, left: 12,
+                    background: hasBanner ? 'rgba(0,0,0,0.35)' : `${accent}18`,
+                    backdropFilter: hasBanner ? 'blur(10px)' : undefined,
+                    WebkitBackdropFilter: hasBanner ? 'blur(10px)' : undefined,
+                    border: hasBanner ? '1px solid rgba(255,255,255,0.2)' : `1px solid ${accent}30`,
+                    borderRadius: 'var(--radius-full)', padding: '3px 10px',
+                    color: hasBanner ? 'white' : accent,
+                    fontFamily: 'var(--font-sans)', fontSize: '0.6rem',
+                    fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
                   }}>{h.type}</div>
 
-                  {/* Bottom info */}
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 18px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <div style={{ minWidth: 0, flex: 1, marginRight: 10 }}>
-                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1rem', color: 'white', fontWeight: 500, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.location}</div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)' }}>{h.date}</div>
-                      </div>
-                      {h.hangout_friends.length > 0 && (
-                        <div style={{ display: 'flex', flexShrink: 0 }}>
-                          {h.hangout_friends.slice(0, 3).map((hf, i) => (
-                            <div key={hf.id} style={{
-                              width: 26, height: 26, borderRadius: '50%',
-                              background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)',
-                              WebkitBackdropFilter: 'blur(4px)', border: '2px solid rgba(255,255,255,0.5)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontFamily: 'var(--font-sans)', fontSize: '0.55rem', fontWeight: 700,
-                              color: 'white', marginLeft: i > 0 ? -7 : 0, position: 'relative', zIndex: 3 - i,
-                            }}>{hf.friend_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
-                          ))}
-                        </div>
-                      )}
+                  {/* Large symbol watermark for no-banner */}
+                  {!hasBanner && (
+                    <div style={{ position: 'absolute', right: 14, bottom: 4, fontSize: '4rem', color: accent, opacity: 0.12, lineHeight: 1, userSelect: 'none', fontFamily: 'var(--font-serif)' }}>
+                      {h.type[0]?.toUpperCase()}
                     </div>
-                    {h.highlights && (
-                      <div style={{ marginTop: 6, fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.highlights}</div>
-                    )}
+                  )}
+                </div>
+
+                {/* Body */}
+                <div style={{ padding: '14px 16px 16px', background: hasBanner ? 'rgba(0,0,0,0.72)' : 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10, backdropFilter: hasBanner ? 'blur(0px)' : undefined }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1rem', fontWeight: 500, color: textColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>{h.location}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: mutedColor }}>{h.date}</div>
                   </div>
-                </Link>
-              )
-            }
-
-            // ── No-photo card ────────────────────────────
-            return (
-              <Link key={h.id} to={`/hangouts/${h.id}`} style={{
-                display: 'flex', flexDirection: 'column', borderRadius: 'var(--radius-xl)',
-                overflow: 'hidden', textDecoration: 'none', boxShadow: 'var(--shadow-md)',
-                border: '1px solid var(--border)', background: 'var(--bg-card)',
-              }}>
-                {/* Accent bar */}
-                <div style={{ height: 6, background: accent, flexShrink: 0 }} />
-
-                <div style={{ padding: '18px 20px 20px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14 }}>
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{h.type}</div>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem', fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.location}</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>{h.date}</div>
-                    {h.highlights && (
-                      <div style={{ marginTop: 10, fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{h.highlights}</div>
-                    )}
-                  </div>
-
                   {h.hangout_friends.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {h.hangout_friends.slice(0, 4).map(hf => (
-                        <span key={hf.id} style={{ padding: '2px 9px', borderRadius: 'var(--radius-full)', background: `${accent}12`, color: accent, fontFamily: 'var(--font-sans)', fontSize: '0.68rem', fontWeight: 500 }}>
-                          {hf.friend_name.split(' ')[0]}
-                        </span>
-                      ))}
+                    <div style={{ display: 'flex', flexShrink: 0 }}>
+                      {h.hangout_friends.slice(0, 4).map((hf, i) => {
+                        const fr = friends.find(f => f.id === hf.friend_id)
+                        return (
+                          <div key={hf.id} style={{
+                            width: 26, height: 26, borderRadius: '50%',
+                            background: hasBanner ? 'rgba(255,255,255,0.2)' : (fr?.avatar_color ?? accent),
+                            border: `2px solid ${hasBanner ? 'rgba(255,255,255,0.45)' : 'var(--bg-card)'}`,
+                            backdropFilter: hasBanner ? 'blur(4px)' : undefined,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontFamily: 'var(--font-serif)', fontSize: '0.52rem', fontWeight: 600,
+                            color: 'white', marginLeft: i > 0 ? -7 : 0, position: 'relative', zIndex: 4 - i,
+                            overflow: 'hidden', flexShrink: 0,
+                          }}>
+                            {fr?.avatar_url
+                              ? <img src={fr.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : hf.friend_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -540,6 +533,16 @@ export default function Hangouts() {
         {friends.length > 0 && (
           <div className="form-group">
             <label className="form-label">Who was there</label>
+            {groups.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                {groups.map(g => (
+                  <button key={g.id} onClick={() => g.memberIds.forEach(id => { if (!hSelectedFriends.includes(id)) toggleFriend(id) })}
+                    style={{ padding: '3px 10px', borderRadius: 'var(--radius-full)', border: `1.5px solid ${g.color}40`, background: `${g.color}10`, color: g.color, fontFamily: 'var(--font-sans)', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
+                    {g.symbol} {g.name}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="pill-wrap">
               {friends.map(f => (
                 <button key={f.id} className="pill pill-default" style={{ cursor: 'pointer', opacity: hSelectedFriends.includes(f.id) ? 1 : 0.45 }} onClick={() => toggleFriend(f.id)}>

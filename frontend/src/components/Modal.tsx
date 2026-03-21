@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 
 interface ModalProps {
@@ -9,6 +9,8 @@ interface ModalProps {
 }
 
 export default function Modal({ open, onClose, title, children }: ModalProps) {
+  const mousedownOnBackdrop = useRef(false)
+
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -21,9 +23,13 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
   if (!open) return null
 
   return (
-    <div className="modal-backdrop" onClick={(e) => {
-      if (e.target === e.currentTarget) onClose()
-    }}>
+    <div
+      className="modal-backdrop"
+      onMouseDown={(e) => { mousedownOnBackdrop.current = e.target === e.currentTarget }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && mousedownOnBackdrop.current) onClose()
+      }}
+    >
       <div className="modal">
         <h2 className="modal-title">{title}</h2>
         {children}

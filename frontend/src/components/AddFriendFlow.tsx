@@ -44,7 +44,7 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
 
   // Step 0 — Who
   const [name, setName] = useState('')
-  const [color, setColor] = useState(COLORS[1])
+  const [color, setColor] = useState(() => COLORS[Math.floor(Math.random() * COLORS.length)])
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -60,6 +60,7 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const overlayMousedown = useRef(false)
 
   const initials = name.trim() ? getInitials(name) : '?'
 
@@ -131,7 +132,7 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
         .tier-btn:hover { transform: translateY(-2px); }
       `}</style>
 
-      <div style={overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={overlay} onMouseDown={e => { overlayMousedown.current = e.target === e.currentTarget }} onClick={e => { if (e.target === e.currentTarget && overlayMousedown.current) onClose() }}>
         <div style={card}>
           {/* Progress bar */}
           <div style={{ height: 3, background: 'var(--border)' }}>

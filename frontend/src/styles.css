@@ -15,9 +15,9 @@
   --border-strong: rgba(0, 0, 0, 0.1);
 
   /* Text */
-  --text: #1a1a2e;
-  --text-secondary: #5a5a72;
-  --text-muted: #9696a8;
+  --text: #111118;
+  --text-secondary: #3a3a50;
+  --text-muted: #7a7a90;
   --text-inverse: #ffffff;
 
   /* Tier accents */
@@ -322,10 +322,10 @@ img { display: block; max-width: 100%; }
 .section-label-sm {
   font-family: var(--font-sans);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* ── Cards — bubbly, soft shadows ── */
@@ -455,8 +455,8 @@ img { display: block; max-width: 100%; }
 
 .friend-card-name {
   font-family: var(--font-serif);
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 1.05rem;
+  font-weight: 600;
   color: var(--text);
   margin-bottom: 2px;
 }
@@ -653,14 +653,13 @@ img { display: block; max-width: 100%; }
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: var(--text);
   color: var(--text-inverse);
-  border-radius: var(--radius-full);
-  padding: 8px 20px;
+  border-radius: var(--radius-md);
+  padding: 8px 18px;
 }
 .btn-primary:hover {
-  opacity: 0.9;
-  box-shadow: var(--shadow-md);
+  opacity: 0.82;
 }
 
 /* ── AI cursor ── */
@@ -680,13 +679,15 @@ img { display: block; max-width: 100%; }
 }
 
 .btn-ai {
-  background: var(--ai-bg);
-  color: var(--ai);
-  border: 1px solid var(--ai-border);
+  background: var(--bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
 }
 .btn-ai:hover {
-  background: rgba(124, 111, 189, 0.12);
+  background: var(--bg-hover);
+  color: var(--text);
+  border-color: var(--border-strong);
 }
 
 .btn-sm {
@@ -731,8 +732,8 @@ img { display: block; max-width: 100%; }
 .tab {
   padding: 8px 16px;
   font-family: var(--font-serif);
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
   border-radius: var(--radius-sm);
   transition: all var(--ease);
   flex: 1;
@@ -977,17 +978,16 @@ img { display: block; max-width: 100%; }
 
 .impression-title {
   font-family: var(--font-serif);
-  font-style: italic;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  margin-bottom: 2px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 3px;
 }
 
 .impression-date {
   font-family: var(--font-sans);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  margin-bottom: var(--space-sm);
 }
 
 .impression-body {

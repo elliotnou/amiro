@@ -13,7 +13,8 @@ import Hangouts from './pages/Hangouts'
 import HangoutDetail from './pages/HangoutDetail'
 import Stats from './pages/Stats'
 import Settings from './pages/Settings'
-import AI, { AIGiftIdeas, AICatchupBrief, AIHangoutIdeas, AIFriendshipStory } from './pages/AI'
+import { AIGiftIdeas, AIHangoutIdeas, AIFriendshipStory } from './pages/AI'
+import FriendGroups from './pages/FriendGroups'
 import Upgrade from './pages/Upgrade'
 import Onboarding from './pages/Onboarding'
 
@@ -60,12 +61,11 @@ export default function App() {
         <Route path="/hangouts" element={<ProtectedRoute><AppLayout><Hangouts /></AppLayout></ProtectedRoute>} />
         <Route path="/hangouts/:id" element={<ProtectedRoute><AppLayout><HangoutDetail /></AppLayout></ProtectedRoute>} />
         <Route path="/stats" element={<ProtectedRoute><AppLayout><Stats /></AppLayout></ProtectedRoute>} />
-        <Route path="/ai" element={<ProtectedRoute><AppLayout><AI /></AppLayout></ProtectedRoute>} />
         <Route path="/ai/gifts/:friendId" element={<ProtectedRoute><AppLayout><AIGiftIdeas /></AppLayout></ProtectedRoute>} />
-        <Route path="/ai/catchup/:friendId" element={<ProtectedRoute><AppLayout><AICatchupBrief /></AppLayout></ProtectedRoute>} />
         <Route path="/ai/hangout-ideas/:friendId" element={<ProtectedRoute><AppLayout><AIHangoutIdeas /></AppLayout></ProtectedRoute>} />
         <Route path="/ai/story/:friendId" element={<ProtectedRoute><AppLayout><AIFriendshipStory /></AppLayout></ProtectedRoute>} />
         <Route path="/upgrade" element={<ProtectedRoute><AppLayout><Upgrade /></AppLayout></ProtectedRoute>} />
+        <Route path="/groups" element={<ProtectedRoute><AppLayout><FriendGroups /></AppLayout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
         <Route path="/onboarding" element={<Onboarding />} />
       </Routes>

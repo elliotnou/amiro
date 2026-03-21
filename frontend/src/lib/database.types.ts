@@ -351,6 +351,47 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_groups: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          color: string
+          symbol: string
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          color?: string
+          symbol?: string
+          description?: string | null
+        }
+        Update: {
+          name?: string
+          color?: string
+          symbol?: string
+          description?: string | null
+        }
+        Relationships: []
+      }
+      friend_group_members: {
+        Row: {
+          id: string
+          group_id: string
+          friend_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          friend_id: string
+        }
+        Update: Record<string, never>
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: { [_ in never]: never }

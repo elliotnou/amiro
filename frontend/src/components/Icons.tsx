@@ -181,6 +181,16 @@ export function IconArrowRight({ size = 16 }: { size?: number }) {
   )
 }
 
+export function IconGroups({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="3"/>
+      <circle cx="16" cy="8" r="3"/>
+      <circle cx="12" cy="17" r="3"/>
+    </svg>
+  )
+}
+
 export function IconSettings({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
