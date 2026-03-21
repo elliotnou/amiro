@@ -623,6 +623,7 @@ img { display: block; max-width: 100%; }
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: 8px 16px;
   border-radius: var(--radius-sm);
@@ -660,6 +661,22 @@ img { display: block; max-width: 100%; }
 .btn-primary:hover {
   opacity: 0.9;
   box-shadow: var(--shadow-md);
+}
+
+/* ── AI cursor ── */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.ai-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 0.9em;
+  background: var(--ai);
+  margin-left: 2px;
+  vertical-align: middle;
+  border-radius: 1px;
+  animation: cursor-blink 0.9s ease-in-out infinite;
 }
 
 .btn-ai {

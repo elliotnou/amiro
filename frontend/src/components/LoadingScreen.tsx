@@ -18,6 +18,7 @@ export default function LoadingScreen() {
           objectFit: 'contain',
           borderRadius: 'var(--radius-xl)',
           mixBlendMode: 'multiply',
+          filter: 'brightness(1.08)',
         }}
       />
       <p style={{

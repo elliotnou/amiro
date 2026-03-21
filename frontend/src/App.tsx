@@ -13,7 +13,8 @@ import Hangouts from './pages/Hangouts'
 import HangoutDetail from './pages/HangoutDetail'
 import Stats from './pages/Stats'
 import Settings from './pages/Settings'
-import AI, { AIGiftIdeas, AICatchupBrief, AIHangoutIdeas } from './pages/AI'
+import AI, { AIGiftIdeas, AICatchupBrief, AIHangoutIdeas, AIFriendshipStory } from './pages/AI'
+import Upgrade from './pages/Upgrade'
 import Onboarding from './pages/Onboarding'
 
 function AppLayout({ children }: { children: React.ReactNode }) {
@@ -63,6 +64,8 @@ export default function App() {
         <Route path="/ai/gifts/:friendId" element={<ProtectedRoute><AppLayout><AIGiftIdeas /></AppLayout></ProtectedRoute>} />
         <Route path="/ai/catchup/:friendId" element={<ProtectedRoute><AppLayout><AICatchupBrief /></AppLayout></ProtectedRoute>} />
         <Route path="/ai/hangout-ideas/:friendId" element={<ProtectedRoute><AppLayout><AIHangoutIdeas /></AppLayout></ProtectedRoute>} />
+        <Route path="/ai/story/:friendId" element={<ProtectedRoute><AppLayout><AIFriendshipStory /></AppLayout></ProtectedRoute>} />
+        <Route path="/upgrade" element={<ProtectedRoute><AppLayout><Upgrade /></AppLayout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
         <Route path="/onboarding" element={<Onboarding />} />
       </Routes>

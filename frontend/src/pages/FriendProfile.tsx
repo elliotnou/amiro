@@ -124,6 +124,7 @@ export default function FriendProfile() {
 
   // ── Edit Info state ──
   const [editName, setEditName] = useState('')
+  const [editNickname, setEditNickname] = useState('')
   const [editLocation, setEditLocation] = useState('')
   const [editBirthday, setEditBirthday] = useState('')
   const [editMetHow, setEditMetHow] = useState('')
@@ -133,11 +134,14 @@ export default function FriendProfile() {
   const [editAvatarUrl, setEditAvatarUrl] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [savingInfo, setSavingInfo] = useState(false)
+  const [interestInput, setInterestInput] = useState('')
+  const [showInterestInput, setShowInterestInput] = useState(false)
   const editPhotoRef = useRef<HTMLInputElement>(null)
 
   const openEditInfo = () => {
     if (!friend) return
     setEditName(friend.name)
+    setEditNickname(friend.nickname || '')
     setEditLocation(friend.location || '')
     setEditBirthday(friend.birthday || '')
     setEditMetHow(friend.met_how || '')
@@ -163,6 +167,7 @@ export default function FriendProfile() {
     setSavingInfo(true)
     await updateFriend({
       name: editName.trim() || friend!.name,
+      nickname: editNickname.trim() || null,
       initials: (editName.trim() || friend!.name).trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0,2),
       location: editLocation || null,
       birthday: editBirthday || null,
@@ -340,7 +345,8 @@ export default function FriendProfile() {
 
             {/* Name + meta + badges */}
             <div style={{ flex: 1, minWidth: 160, color: 'white' }}>
-              <h1 style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '2rem', fontWeight: 500, marginBottom: 4, lineHeight: 1.15, ...(effect === 'gradient' ? { background: 'linear-gradient(135deg, white 0%, rgba(255,255,255,0.6) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : { color: 'white' }) }}>{friend.name}</h1>
+              <h1 style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '2rem', fontWeight: 500, marginBottom: friend.nickname ? 2 : 4, lineHeight: 1.15, ...(effect === 'gradient' ? { background: 'linear-gradient(135deg, white 0%, rgba(255,255,255,0.6) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : { color: 'white' }) }}>{friend.name}</h1>
+              {friend.nickname && <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', marginBottom: 10, letterSpacing: '0.01em' }}>"{friend.nickname}"</div>}
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)', marginBottom: 14, lineHeight: 1.5 }}>
                 {[friend.location, friend.met_how, friend.met_date ? `since ${friend.met_date}` : null].filter(Boolean).join(' · ')}
               </p>
@@ -396,6 +402,7 @@ export default function FriendProfile() {
                 <Link to={`/ai/gifts/${friend.id}`} className="btn btn-ai btn-sm">Gift ideas</Link>
                 <Link to={`/ai/catchup/${friend.id}`} className="btn btn-ai btn-sm">Catch-up brief</Link>
                 <Link to={`/ai/hangout-ideas/${friend.id}`} className="btn btn-ai btn-sm">Hangout ideas</Link>
+                <Link to={`/ai/story/${friend.id}`} className="btn btn-ai btn-sm">Friendship story</Link>
               </div>
 
               {/* ── Two-column info layout ── */}
@@ -411,11 +418,41 @@ export default function FriendProfile() {
                         <div className="pill-wrap" style={{ marginTop: 8 }}>{friend.tags.map(tag => <span key={tag} className="pill pill-default">{tag}</span>)}</div>
                       </div>
                     )}
-                    <InnerLabel accent={bannerColor}>Interests</InnerLabel>
-                    <div className="pill-wrap" style={{ marginTop: 8 }}>
-                      {friend.interests.map(i => <span key={i} className="pill pill-accent">{i}</span>)}
-                      {friend.interests.length === 0 && <span className="text-xs text-muted text-sans">None yet</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <InnerLabel accent={bannerColor}>Interests</InnerLabel>
+                      <button className="btn btn-ghost btn-sm text-sans" style={{ padding: '2px 6px', fontSize: '0.68rem' }} onClick={() => setShowInterestInput(v => !v)}>+ add</button>
                     </div>
+                    <div className="pill-wrap" style={{ marginTop: 8 }}>
+                      {friend.interests.map(i => (
+                        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 'var(--radius-full)', background: `${bannerColor}18`, border: `1px solid ${bannerColor}40`, color: bannerColor, fontFamily: 'var(--font-sans)', fontSize: '0.75rem', fontWeight: 500 }}>
+                          {i}
+                          <button onClick={() => updateFriend({ interests: friend.interests.filter(x => x !== i) })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.55, padding: 0, lineHeight: 1, fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>×</button>
+                        </span>
+                      ))}
+                      {friend.interests.length === 0 && !showInterestInput && <span className="text-xs text-muted text-sans">None yet</span>}
+                    </div>
+                    {showInterestInput && (
+                      <input
+                        className="form-input"
+                        style={{ marginTop: 8, fontSize: '0.82rem', padding: '6px 10px' }}
+                        placeholder="Type and press Enter…"
+                        value={interestInput}
+                        autoFocus
+                        onChange={e => setInterestInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ',') {
+                            e.preventDefault()
+                            const val = interestInput.trim().replace(/,$/, '')
+                            if (val && !friend.interests.includes(val)) updateFriend({ interests: [...friend.interests, val] })
+                            setInterestInput('')
+                            setShowInterestInput(false)
+                          } else if (e.key === 'Escape') {
+                            setInterestInput(''); setShowInterestInput(false)
+                          }
+                        }}
+                        onBlur={() => { setInterestInput(''); setShowInterestInput(false) }}
+                      />
+                    )}
                   </div>
 
                   {/* Contact */}
@@ -445,7 +482,6 @@ export default function FriendProfile() {
                   <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 4 }}>
                       <InnerLabel accent={bannerColor}>Relationship radar</InnerLabel>
-                      <span className="text-xs text-muted text-sans">pure math</span>
                     </div>
                     <RelationshipRadar scores={radarScores} color={bannerColor} size={200} />
                   </div>
@@ -728,9 +764,13 @@ export default function FriendProfile() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
-          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <div className="form-group">
             <label className="form-label">Name</label>
             <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Full name" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Nickname</label>
+            <input className="form-input" value={editNickname} onChange={e => setEditNickname(e.target.value)} placeholder="e.g. Bubs, J, etc." />
           </div>
           <div className="form-group">
             <label className="form-label">Location</label>

@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth'
 import { useFriends } from '../lib/hooks/useFriends'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import { useSidebar } from '../lib/SidebarContext'
+import { useSubscription } from '../lib/hooks/useSubscription'
 
 const navItems = [
   { to: '/home', label: 'Home', Icon: IconHome },
@@ -27,6 +28,7 @@ export default function Sidebar() {
   const { friends } = useFriends()
   const { hangouts } = useHangouts()
   const { collapsed, toggle } = useSidebar()
+  const { status: subStatus } = useSubscription()
 
   const handleSignOut = async () => {
     await signOut()
@@ -143,6 +145,18 @@ export default function Sidebar() {
       {/* ── Always-visible bottom section ── */}
       <div className="sidebar-bottom" style={{ flexShrink: 0, padding: collapsed ? 'var(--space-md) var(--space-sm)' : undefined }}>
         <nav className="sidebar-nav" style={{ marginBottom: collapsed ? 0 : 'var(--space-md)' }}>
+          {!collapsed && subStatus === 'inactive' && (
+            <NavLink to="/upgrade" className={({ isActive }) => `sidebar-link ai-link ${isActive ? 'active' : ''}`} style={{ marginBottom: 4 }}>
+              <span className="link-icon"><IconSparkle size={18} /></span>
+              Upgrade to Pro
+            </NavLink>
+          )}
+          {collapsed && subStatus === 'inactive' && (
+            <NavLink to="/upgrade" className={({ isActive }) => `sidebar-link ai-link ${isActive ? 'active' : ''}`} title="Upgrade to Pro">
+              <span className="link-icon"><IconSparkle size={18} /></span>
+            </NavLink>
+          )}
+
           <NavLink
             to="/settings"
             className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}

@@ -30,6 +30,7 @@ export type Database = {
           id: string
           user_id: string
           name: string
+          nickname: string | null
           initials: string
           avatar_color: string
           avatar_url: string | null
@@ -50,6 +51,7 @@ export type Database = {
           id?: string
           user_id: string
           name: string
+          nickname?: string | null
           initials: string
           avatar_color: string
           avatar_url?: string | null
@@ -66,6 +68,7 @@ export type Database = {
         }
         Update: {
           name?: string
+          nickname?: string | null
           initials?: string
           avatar_color?: string
           avatar_url?: string | null

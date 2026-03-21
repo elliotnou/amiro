@@ -7,7 +7,7 @@ export type HangoutRow = Database['public']['Tables']['hangouts']['Row']
 export type HangoutFriendRow = Database['public']['Tables']['hangout_friends']['Row']
 
 export interface HangoutWithFriends extends HangoutRow {
-  hangout_friends: (HangoutFriendRow & { friend_name: string })[]
+  hangout_friends: (HangoutFriendRow & { friend_name: string; avatar_color?: string })[]
 }
 
 export function useHangouts() {
@@ -76,33 +76,50 @@ export function useHangouts() {
     return { error: error?.message ?? null }
   }
 
-  return { hangouts, loading, error, createHangout, deleteHangout, reload: load }
+  const updateHangout = async (
+    id: string,
+    updates: { type?: string; location?: string; date?: string; highlights?: string | null; follow_ups?: string[] },
+    friendIds?: string[]
+  ) => {
+    const { error } = await supabase.from('hangouts').update(updates).eq('id', id)
+    if (friendIds !== undefined) {
+      await supabase.from('hangout_friends').delete().eq('hangout_id', id)
+      if (friendIds.length > 0) {
+        await supabase.from('hangout_friends').insert(friendIds.map(fid => ({ hangout_id: id, friend_id: fid })))
+      }
+    }
+    if (!error) await load()
+    return { error: error?.message ?? null }
+  }
+
+  return { hangouts, loading, error, createHangout, deleteHangout, updateHangout, reload: load }
 }
 
 export function useHangout(id: string | undefined) {
   const [hangout, setHangout] = useState<HangoutWithFriends | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!id) return
-    supabase
+    const { data } = await supabase
       .from('hangouts')
-      .select(`*, hangout_friends (id, friend_id, feeling_label, friends (name))`)
+      .select(`*, hangout_friends (id, friend_id, feeling_label, friends (name, avatar_color))`)
       .eq('id', id)
       .single()
-      .then(({ data }) => {
-        if (data) {
-          setHangout({
-            ...data,
-            hangout_friends: ((data as any).hangout_friends ?? []).map((hf: any) => ({
-              ...hf,
-              friend_name: hf.friends?.name ?? '',
-            })),
-          })
-        }
-        setLoading(false)
+    if (data) {
+      setHangout({
+        ...data,
+        hangout_friends: ((data as any).hangout_friends ?? []).map((hf: any) => ({
+          ...hf,
+          friend_name: hf.friends?.name ?? '',
+          avatar_color: hf.friends?.avatar_color ?? 'var(--accent)',
+        })),
       })
+    }
+    setLoading(false)
   }, [id])
 
-  return { hangout, loading }
+  useEffect(() => { load() }, [load])
+
+  return { hangout, loading, reload: load }
 }

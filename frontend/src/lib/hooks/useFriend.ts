@@ -41,36 +41,43 @@ export function useFriend(id: string | undefined) {
 
   const addFact = async (category: string, value: string) => {
     if (!id) return
-    await supabase.from('friend_facts').insert({ friend_id: id, category, value })
-    await load()
+    const tempId = `temp-${Date.now()}`
+    const optimistic: FriendFactRow = { id: tempId, friend_id: id, category, value, created_at: new Date().toISOString() }
+    setFriend(prev => prev ? { ...prev, facts: [...prev.facts, optimistic] } : prev)
+    const { data } = await supabase.from('friend_facts').insert({ friend_id: id, category, value }).select().single()
+    if (data) setFriend(prev => prev ? { ...prev, facts: prev.facts.map(f => f.id === tempId ? data : f) } : prev)
   }
 
   const deleteFact = async (factId: string) => {
+    setFriend(prev => prev ? { ...prev, facts: prev.facts.filter(f => f.id !== factId) } : prev)
     await supabase.from('friend_facts').delete().eq('id', factId)
-    await load()
   }
 
   const addNote = async (text: string, date?: string) => {
     if (!id) return
-    await supabase.from('friend_notes').insert({ friend_id: id, text, date: date ?? new Date().toISOString().slice(0, 10) })
-    await load()
+    const tempId = `temp-${Date.now()}`
+    const noteDate = date ?? new Date().toISOString().slice(0, 10)
+    const optimistic: FriendNoteRow = { id: tempId, friend_id: id, text, date: noteDate, created_at: new Date().toISOString() }
+    setFriend(prev => prev ? { ...prev, notes: [optimistic, ...prev.notes] } : prev)
+    const { data } = await supabase.from('friend_notes').insert({ friend_id: id, text, date: noteDate }).select().single()
+    if (data) setFriend(prev => prev ? { ...prev, notes: prev.notes.map(n => n.id === tempId ? data : n) } : prev)
   }
 
   const deleteNote = async (noteId: string) => {
+    setFriend(prev => prev ? { ...prev, notes: prev.notes.filter(n => n.id !== noteId) } : prev)
     await supabase.from('friend_notes').delete().eq('id', noteId)
-    await load()
   }
 
   const upsertContact = async (contact: Partial<FriendContactRow>) => {
     if (!id) return
-    await supabase.from('friend_contacts').upsert({ friend_id: id, ...contact })
-    await load()
+    setFriend(prev => prev ? { ...prev, contact: { ...(prev.contact ?? { friend_id: id, id: '', created_at: '', updated_at: '' } as any), ...contact } } : prev)
+    await supabase.from('friend_contacts').upsert({ friend_id: id, ...contact }, { onConflict: 'friend_id' })
   }
 
   const updateFriend = async (updates: Partial<FriendRow>) => {
     if (!id) return
+    setFriend(prev => prev ? { ...prev, ...updates } : prev)
     await supabase.from('friends').update(updates).eq('id', id)
-    await load()
   }
 
   return { friend, loading, error, reload: load, addFact, deleteFact, addNote, deleteNote, upsertContact, updateFriend }
