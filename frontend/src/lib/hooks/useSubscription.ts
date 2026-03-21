@@ -10,12 +10,12 @@ export function useSubscription() {
 
   useEffect(() => {
     if (!user) { setStatus('inactive'); return }
-    supabase
-      .from('subscriptions')
+    ;(supabase
+      .from('subscriptions' as any)
       .select('status')
       .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
+      .maybeSingle() as any)
+      .then(({ data }: { data: any }) => {
         setStatus(data?.status === 'active' ? 'active' : 'inactive')
       })
       .catch(() => setStatus('inactive'))

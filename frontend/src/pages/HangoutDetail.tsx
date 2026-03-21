@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useHangout, useHangouts } from '../lib/hooks/useHangouts'
 import { useFriends } from '../lib/hooks/useFriends'
+import { useFriendGroups } from '../lib/hooks/useFriendGroups'
 import { useGallery } from '../lib/hooks/useGallery'
 import Modal from '../components/Modal'
 import { IconArrowLeft } from '../components/Icons'
@@ -67,6 +68,7 @@ export default function HangoutDetail() {
   const { hangout, loading, reload } = useHangout(id)
   const { deleteHangout, updateHangout } = useHangouts()
   const { friends } = useFriends()
+  const { groups } = useFriendGroups()
   const { images } = useGallery(undefined, id)
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -194,7 +196,7 @@ export default function HangoutDetail() {
           {/* ── Journal ── */}
           <div className="pencil-row" style={{ marginBottom: 'var(--space-2xl)', paddingBottom: 'var(--space-2xl)', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editing === 'journal' || hangout.highlights ? 12 : 0 }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Journal</div>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Journal</div>
               {editing !== 'journal' && <PencilBtn onClick={() => open('journal')} />}
             </div>
 
@@ -229,7 +231,7 @@ export default function HangoutDetail() {
           {/* ── Who was there ── */}
           <div className="pencil-row" style={{ marginBottom: 'var(--space-2xl)', paddingBottom: 'var(--space-2xl)', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-lg)' }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>With</div>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>With</div>
               {editing !== 'friends' && <PencilBtn onClick={() => open('friends')} />}
             </div>
 
@@ -245,17 +247,56 @@ export default function HangoutDetail() {
                 </div>
                 <InlineSave onSave={() => save('friends')} onCancel={cancel} saving={saving} />
               </div>
-            ) : hangout.hangout_friends.length > 0 ? (
+            ) : hangout.hangout_friends.length > 0 || hangout.hangout_groups.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {hangout.hangout_friends.map(hf => (
-                  <Link key={hf.id} to={`/friends/${hf.friend_id}`} style={{ display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: hf.avatar_color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-serif)', fontSize: '0.8rem', fontWeight: 500, color: 'white' }}>
-                      {hf.friend_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                {/* Group-tagged sections */}
+                {hangout.hangout_groups.map(hg => {
+                  const groupDef = groups.find(g => g.id === hg.group_id)
+                  const memberIds = new Set(groupDef?.memberIds ?? [])
+                  const members = hangout.hangout_friends.filter(hf => memberIds.has(hf.friend_id))
+                  return (
+                    <div key={hg.id} style={{ position: 'relative' }}>
+                      {/* Backdrop — extends slightly beyond content, doesn't shift it */}
+                      <div style={{ position: 'absolute', inset: '-8px -12px', background: `${hg.group_color}0d`, border: `1px solid ${hg.group_color}28`, borderRadius: 'var(--radius-lg)', pointerEvents: 'none' }} />
+                      <div style={{ position: 'relative' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px 3px 7px', borderRadius: 'var(--radius-full)', background: `${hg.group_color}1a`, border: `1.5px solid ${hg.group_color}50`, marginBottom: 12 }}>
+                          <span style={{ fontSize: '0.95rem' }}>{hg.group_symbol}</span>
+                          <span style={{ fontFamily: 'var(--font-serif)', fontSize: '0.82rem', fontWeight: 600, color: hg.group_color, letterSpacing: '0.01em' }}>{hg.group_name}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {members.map(hf => (
+                            <Link key={hf.id} to={`/friends/${hf.friend_id}`} style={{ display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none' }}>
+                              <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: hf.avatar_color || hg.group_color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-serif)', fontSize: '0.78rem', fontWeight: 500, color: 'white' }}>
+                                {hf.friend_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>{hf.friend_name}</span>
+                              {hf.feeling_label && <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{hf.feeling_label}</span>}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.92rem', fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>{hf.friend_name}</span>
-                    {hf.feeling_label && <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{hf.feeling_label}</span>}
-                  </Link>
-                ))}
+                  )
+                })}
+                {/* Friends not in any group */}
+                {(() => {
+                  const groupedIds = new Set(
+                    hangout.hangout_groups.flatMap(hg => {
+                      const g = groups.find(g => g.id === hg.group_id)
+                      return g?.memberIds ?? []
+                    })
+                  )
+                  const solo = hangout.hangout_friends.filter(hf => !groupedIds.has(hf.friend_id))
+                  return solo.map(hf => (
+                    <Link key={hf.id} to={`/friends/${hf.friend_id}`} style={{ display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none' }}>
+                      <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: hf.avatar_color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-serif)', fontSize: '0.8rem', fontWeight: 500, color: 'white' }}>
+                        {hf.friend_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.92rem', fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>{hf.friend_name}</span>
+                      {hf.feeling_label && <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{hf.feeling_label}</span>}
+                    </Link>
+                  ))
+                })()}
               </div>
             ) : (
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>Nobody tagged yet.</p>
@@ -265,7 +306,7 @@ export default function HangoutDetail() {
           {/* ── Photos ── */}
           {images.length > 1 && (
             <div style={{ marginBottom: 'var(--space-2xl)' }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 'var(--space-lg)' }}>Photos · {images.length}</div>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 'var(--space-lg)' }}>Photos · {images.length}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
                 {images.map((img, i) => (
                   <div key={img.id} style={{ aspectRatio: '1', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setLightboxIdx(i)}>
@@ -279,7 +320,7 @@ export default function HangoutDetail() {
           {/* ── Follow-ups ── */}
           <div className="pencil-row">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: hangout.follow_ups.length > 0 || editing === 'followups' ? 'var(--space-lg)' : 0 }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Follow-ups</div>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Follow-ups</div>
               {editing !== 'followups' && <PencilBtn onClick={() => open('followups')} />}
             </div>
 

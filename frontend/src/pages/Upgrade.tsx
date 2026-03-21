@@ -64,7 +64,6 @@ export default function Upgrade() {
         <div style={{ textAlign: 'left', marginBottom: 'var(--space-2xl)', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
             { title: 'Gift ideas', desc: 'Personalised suggestions based on what you know about them' },
-            { title: 'Catch-up brief', desc: 'A quick briefing before you see someone' },
             { title: 'Hangout ideas', desc: 'Tailored to their interests and your history together' },
             { title: 'Ask anything', desc: 'Query your entire friend network with natural language' },
           ].map(f => (

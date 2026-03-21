@@ -6,8 +6,17 @@ import type { Database } from '../database.types'
 export type HangoutRow = Database['public']['Tables']['hangouts']['Row']
 export type HangoutFriendRow = Database['public']['Tables']['hangout_friends']['Row']
 
+export interface HangoutGroupTag {
+  id: string
+  group_id: string
+  group_name: string
+  group_color: string
+  group_symbol: string
+}
+
 export interface HangoutWithFriends extends HangoutRow {
   hangout_friends: (HangoutFriendRow & { friend_name: string; avatar_color?: string })[]
+  hangout_groups: HangoutGroupTag[]
 }
 
 export function useHangouts() {
@@ -35,13 +44,31 @@ export function useHangouts() {
 
     if (error) { setError(error.message); setLoading(false); return }
 
-    // Flatten nested friend names
+    // Try to fetch group tags separately — gracefully skip if table doesn't exist yet
+    const groupsMap: Record<string, HangoutGroupTag[]> = {}
+    try {
+      const { data: hgData } = await supabase
+        .from('hangout_groups')
+        .select('id, hangout_id, group_id, friend_groups ( name, color, symbol )')
+      for (const hg of (hgData ?? []) as any[]) {
+        if (!groupsMap[hg.hangout_id]) groupsMap[hg.hangout_id] = []
+        groupsMap[hg.hangout_id].push({
+          id: hg.id,
+          group_id: hg.group_id,
+          group_name: hg.friend_groups?.name ?? '',
+          group_color: hg.friend_groups?.color ?? '#457b9d',
+          group_symbol: hg.friend_groups?.symbol ?? '✦',
+        })
+      }
+    } catch { /* table not yet migrated — skip */ }
+
     const shaped: HangoutWithFriends[] = (data ?? []).map((h: any) => ({
       ...h,
       hangout_friends: (h.hangout_friends ?? []).map((hf: any) => ({
         ...hf,
         friend_name: hf.friends?.name ?? '',
       })),
+      hangout_groups: groupsMap[h.id] ?? [],
     }))
     setHangouts(shaped)
     setLoading(false)
@@ -51,7 +78,8 @@ export function useHangouts() {
 
   const createHangout = async (
     input: { type: string; location: string; date: string; highlights?: string; follow_ups?: string[] },
-    friendIds: { id: string; feeling_label?: string }[]
+    friendIds: { id: string; feeling_label?: string }[],
+    groupIds: string[] = []
   ) => {
     if (!user) return { error: 'Not authenticated' }
     const { data, error } = await supabase
@@ -64,6 +92,11 @@ export function useHangouts() {
     if (friendIds.length > 0) {
       await supabase.from('hangout_friends').insert(
         friendIds.map(f => ({ hangout_id: data.id, friend_id: f.id, feeling_label: f.feeling_label }))
+      )
+    }
+    if (groupIds.length > 0) {
+      await supabase.from('hangout_groups').insert(
+        groupIds.map(gid => ({ hangout_id: data.id, group_id: gid }))
       )
     }
     await load()
@@ -107,6 +140,21 @@ export function useHangout(id: string | undefined) {
       .eq('id', id)
       .single()
     if (data) {
+      let hangoutGroups: HangoutGroupTag[] = []
+      try {
+        const { data: hgData } = await supabase
+          .from('hangout_groups')
+          .select('id, group_id, friend_groups (name, color, symbol)')
+          .eq('hangout_id', id)
+        hangoutGroups = ((hgData ?? []) as any[]).map((hg: any) => ({
+          id: hg.id,
+          group_id: hg.group_id,
+          group_name: hg.friend_groups?.name ?? '',
+          group_color: hg.friend_groups?.color ?? '#457b9d',
+          group_symbol: hg.friend_groups?.symbol ?? '✦',
+        }))
+      } catch { /* skip */ }
+
       setHangout({
         ...data,
         hangout_friends: ((data as any).hangout_friends ?? []).map((hf: any) => ({
@@ -114,6 +162,7 @@ export function useHangout(id: string | undefined) {
           friend_name: hf.friends?.name ?? '',
           avatar_color: hf.friends?.avatar_color ?? 'var(--accent)',
         })),
+        hangout_groups: hangoutGroups,
       })
     }
     setLoading(false)

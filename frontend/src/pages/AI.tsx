@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useFriend } from '../lib/hooks/useFriend'
-import { useFriends } from '../lib/hooks/useFriends'
 import { useHangouts } from '../lib/hooks/useHangouts'
-import { callAI, buildFriendContext, buildAllFriendsContext, PROMPTS } from '../lib/ai'
+import { callAI, buildFriendContext, PROMPTS } from '../lib/ai'
 import { IconArrowLeft, IconSparkle } from '../components/Icons'
 
 // ── Shared streaming hook ──────────────────────────────────────────
@@ -111,13 +110,13 @@ function AIResponse({ text, status, error, regenerate }: {
   return (
     <div style={{ minHeight: 80 }}>
       {status === 'loading' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0', background: 'var(--bg)', borderRadius: 'var(--radius-xl)' }}>
           <img
             src="/loading.gif"
             alt="Generating…"
-            style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 'var(--radius-md)', mixBlendMode: 'multiply', filter: 'brightness(1.08)', flexShrink: 0 }}
+            style={{ width: 160, height: 160, objectFit: 'contain', mixBlendMode: 'multiply', filter: 'brightness(1.08)' }}
           />
-          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontFamily: 'var(--font-sans)', fontSize: '0.82rem' }}>Generating…</span>
+          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontFamily: 'var(--font-serif)', fontSize: '1rem', letterSpacing: '0.06em', marginTop: 4 }}>Generating…</span>
         </div>
       )}
       {status !== 'loading' && text && <MarkdownText text={text} />}
@@ -166,11 +165,12 @@ function FriendAIPage({ title, buildPrompt, friendId }: {
       </div>
 
       <div className="animate-in animate-in-2" style={{
-        background: 'var(--bg-card)',
+        background: status === 'loading' ? 'transparent' : 'var(--bg-card)',
         borderRadius: 'var(--radius-xl)',
-        padding: 'var(--space-xl)',
-        border: '1px solid var(--ai-border)',
-        boxShadow: '0 2px 16px rgba(124,111,189,0.06)',
+        padding: status === 'loading' ? '0' : 'var(--space-xl)',
+        border: status === 'loading' ? 'none' : '1px solid var(--ai-border)',
+        boxShadow: status === 'loading' ? 'none' : '0 2px 16px rgba(124,111,189,0.06)',
+        transition: 'background 0.2s, border-color 0.2s',
       }}>
         <AIResponse text={text} status={status} error={error} regenerate={regenerate} />
       </div>
@@ -182,11 +182,6 @@ function FriendAIPage({ title, buildPrompt, friendId }: {
 export function AIGiftIdeas() {
   const { friendId } = useParams()
   return <FriendAIPage friendId={friendId} title={n => `Gift ideas for ${n}`} buildPrompt={PROMPTS.giftIdeas} />
-}
-
-export function AICatchupBrief() {
-  const { friendId } = useParams()
-  return <FriendAIPage friendId={friendId} title={n => `Catch-up brief for ${n}`} buildPrompt={PROMPTS.catchupBrief} />
 }
 
 export function AIHangoutIdeas() {
@@ -272,123 +267,20 @@ export function AIFriendshipStory() {
         </div>
 
         {/* Response */}
-        {activePrompt && (
+        {activePrompt && status !== 'loading' && (
           <div style={{ marginTop: 'var(--space-xl)', borderTop: '1px solid var(--ai-border)', paddingTop: 'var(--space-xl)' }}>
             <AIResponse text={text} status={status} error={error} regenerate={regenerate} />
           </div>
         )}
       </div>
-    </div>
-  )
-}
 
-// ── Main AI page ───────────────────────────────────────────────────
-const SUGGESTED = [
-  "Who haven't I seen in a while?",
-  "Who should I reach out to this week?",
-  "Which friendships need more attention?",
-  "Plan a group hangout for this weekend",
-]
-
-export default function AI() {
-  const { friends } = useFriends()
-  const { hangouts } = useHangouts()
-  const [input, setInput] = useState('')
-  const [activePrompt, setActivePrompt] = useState<string | null>(null)
-  const { text, status, error, regenerate } = useAIStream(activePrompt)
-
-  const ask = (q: string) => {
-    if (!q.trim()) return
-    const ctx = buildAllFriendsContext(friends, hangouts)
-    setActivePrompt(PROMPTS.globalQuery(ctx, q.trim()))
-    setInput('')
-  }
-
-  // Friends not seen in 30+ days
-  const reconnectList = friends.filter(f => {
-    const friendHangouts = hangouts.filter(h => h.hangout_friends.some((hf: any) => hf.friend_id === f.id))
-    if (friendHangouts.length === 0) return f.hangout_count === 0
-    const last = [...friendHangouts].sort((a, b) => b.date.localeCompare(a.date))[0]
-    const days = Math.floor((Date.now() - new Date(last.date).getTime()) / 86400000)
-    return days >= 30
-  }).slice(0, 5)
-
-  return (
-    <div className="page-container" style={{ maxWidth: 720 }}>
-      <div className="animate-in" style={{ marginBottom: 'var(--space-2xl)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: 'var(--ai-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ai)' }}>
-            <IconSparkle size={22} />
-          </div>
-          <div>
-            <h1 className="page-title" style={{ marginBottom: 2 }}>AI Assistant</h1>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Ask anything about your {friends.length} friendships</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Global question input */}
-      <div className="animate-in animate-in-1" style={{ marginBottom: 'var(--space-xl)' }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 'var(--space-sm)' }}>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && ask(input)}
-            placeholder="Ask about your friends…"
-            style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--ai-border)', background: 'var(--bg-card)', fontFamily: 'var(--font-sans)', fontSize: '0.9rem', color: 'var(--text)', outline: 'none', boxShadow: '0 1px 8px rgba(124,111,189,0.06)' }}
-          />
-          <button
-            onClick={() => ask(input)}
-            disabled={!input.trim() || status === 'loading'}
-            className="btn btn-ai"
-            style={{ padding: '12px 20px', borderRadius: 'var(--radius-lg)', fontFamily: 'var(--font-sans)', fontSize: '0.82rem' }}
-          >
-            Ask
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {SUGGESTED.map(q => (
-            <button key={q} onClick={() => ask(q)} style={{ padding: '5px 12px', borderRadius: 'var(--radius-full)', border: '1px solid var(--ai-border)', background: 'var(--ai-bg)', color: 'var(--ai)', fontFamily: 'var(--font-sans)', fontSize: '0.72rem', cursor: 'pointer', transition: 'background 0.15s' }}>
-              {q}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Response area */}
-      {activePrompt && (
-        <div className="animate-in" style={{ marginBottom: 'var(--space-2xl)', background: 'var(--bg-card)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-xl)', border: '1px solid var(--ai-border)', boxShadow: '0 2px 16px rgba(124,111,189,0.06)' }}>
+      {/* Loading state outside the card */}
+      {activePrompt && status === 'loading' && (
+        <div style={{ marginTop: 'var(--space-xl)' }}>
           <AIResponse text={text} status={status} error={error} regenerate={regenerate} />
         </div>
       )}
-
-      {/* Reconnect panel */}
-      {reconnectList.length > 0 && (
-        <div className="animate-in animate-in-2">
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 'var(--space-md)' }}>
-            Reconnect
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {reconnectList.map(f => (
-              <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: f.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.65rem', color: 'white', fontFamily: 'var(--font-serif)', fontWeight: 500, overflow: 'hidden' }}>
-                  {f.avatar_url ? <img src={f.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : f.initials}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.88rem', fontWeight: 500, color: 'var(--text)' }}>{f.name}</div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    {f.hangout_count === 0 ? 'Never logged a hangout' : 'Haven\'t seen them recently'}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <Link to={`/friends/${f.id}`} className="btn btn-ghost btn-sm text-sans" style={{ fontSize: '0.72rem' }}>View profile</Link>
-                  <Link to={`/ai/catchup/${f.id}`} className="btn btn-ai btn-sm" style={{ fontSize: '0.72rem' }}>Catch-up brief</Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
+

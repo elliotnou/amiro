@@ -71,8 +71,6 @@ export function buildAllFriendsContext(friends: any[], hangouts: any[]): string 
 export const PROMPTS = {
   giftIdeas: (ctx: string) => `Here is context about my friend:\n${ctx}\n\nSuggest 4-5 specific, personalized gift ideas for them. For each gift give: name, approximate price range, and 1-2 sentences explaining why it suits this specific person. Reference their actual facts and interests. Avoid generic gift suggestions.`,
 
-  catchupBrief: (ctx: string) => `Here is context about my friend:\n${ctx}\n\nI'm about to see them soon. Write a concise catch-up brief covering:\n1. Key things to remember or follow up on (from notes)\n2. 2-3 specific conversation topics based on what I know about them\n3. One concrete thing I could do or say that would mean a lot to them personally\n\nKeep it warm and practical.`,
-
   hangoutIdeas: (ctx: string) => `Here is context about my friend:\n${ctx}\n\nSuggest 4 hangout ideas for us. Mix different vibes — active, chill, food, experience. For each: the type of hangout, a specific suggestion (not generic), and why it would work for this specific person. Use their location, interests, and our history together.`,
 
   globalQuery: (ctx: string, question: string) => `Here is my friend network:\n${ctx}\n\nMy question: ${question}\n\nAnswer based on what you know about my friends. Be specific — reference actual names and details from the data above.`,

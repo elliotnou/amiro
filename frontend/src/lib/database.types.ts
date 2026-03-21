@@ -392,6 +392,21 @@ export type Database = {
         Update: Record<string, never>
         Relationships: []
       }
+      hangout_groups: {
+        Row: {
+          id: string
+          hangout_id: string
+          group_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          hangout_id: string
+          group_id: string
+        }
+        Update: Record<string, never>
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: { [_ in never]: never }

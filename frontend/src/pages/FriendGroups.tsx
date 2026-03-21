@@ -541,7 +541,7 @@ function GroupDetail({ group, allFriends, onClose, onDelete, onAddMember, onEdit
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function FriendGroups() {
-  const { groups, loading, createGroup, updateGroup, deleteGroup, addMember, removeMember } = useFriendGroups()
+  const { groups, loading, createGroup, updateGroup, deleteGroup, addMember } = useFriendGroups()
   const { friends } = useFriends()
 
   const [showCreate, setShowCreate] = useState(false)

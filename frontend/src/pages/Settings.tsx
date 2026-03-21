@@ -148,7 +148,7 @@ export default function Settings() {
                 </div>
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 var(--space-xl)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {['Unlimited AI features', 'Ask questions about any friend', 'Gift ideas & catchup briefs', 'Friendship stories', 'Priority support'].map(f => (
+                {['Unlimited AI features', 'Ask questions about any friend', 'Gift ideas & hangout ideas', 'Friendship stories', 'Priority support'].map(f => (
                   <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-sans)', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
                     <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.7rem' }}>✓</span> {f}
                   </li>
@@ -170,7 +170,7 @@ export default function Settings() {
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 8 }}>Pro</div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 600, marginBottom: 4 }}>$5 <span style={{ fontSize: '0.9rem', fontWeight: 400, color: 'var(--text-muted)' }}>/ month</span></div>
                 <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {['Unlimited AI features', 'Ask questions about any friend', 'Gift ideas & catchup briefs', 'Friendship stories'].map(f => (
+                  {['Unlimited AI features', 'Ask questions about any friend', 'Gift ideas & hangout ideas', 'Friendship stories'].map(f => (
                     <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-sans)', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
                       <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.7rem' }}>✓</span> {f}
                     </li>

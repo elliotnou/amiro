@@ -20,6 +20,13 @@ import { callAI, buildFriendContext, PROMPTS } from '../lib/ai'
 
 const MET_HOW_OPTIONS = ['School','Work','Mutual friend','Online','Neighborhood','Event','Travel','Family','Other']
 
+function lightenHex(hex: string, amount: number): string {
+  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + amount)
+  const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + amount)
+  const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + amount)
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+}
+
 // Pencil icon inline (no Icons.tsx change needed)
 function IconPencil({ size = 16 }: { size?: number }) {
   return (
@@ -69,9 +76,9 @@ function FreshnessRing({ percentage, color, size = 140, trackColor }: { percenta
   )
 }
 
-function InnerLabel({ children, style, accent }: { children: React.ReactNode; style?: React.CSSProperties; accent?: string }) {
+function InnerLabel({ children, style, accent, fontFamily }: { children: React.ReactNode; style?: React.CSSProperties; accent?: string; fontFamily?: string }) {
   return (
-    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.66rem', fontWeight: 700, color: accent || 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', ...style as object }}>
+    <span style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '0.7rem', fontWeight: 700, color: accent || 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', ...style as object }}>
       {children}
     </span>
   )
@@ -355,7 +362,9 @@ export default function FriendProfile() {
 
         {/* ── Hero ── */}
         <div style={{
-          background: bannerColor,
+          background: effect === 'gradient'
+            ? `linear-gradient(135deg, ${bannerColor} 0%, ${lightenHex(bannerColor, 55)} 100%)`
+            : bannerColor,
           padding: '44px 48px 40px',
           position: 'relative',
         }}>
@@ -377,7 +386,9 @@ export default function FriendProfile() {
             {/* Name + meta + badges */}
             <div style={{ flex: 1, minWidth: 160, color: 'white' }}>
               <h1 style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '2rem', fontWeight: 500, marginBottom: friend.nickname ? 2 : 4, lineHeight: 1.15, ...(effect === 'gradient' ? { background: 'linear-gradient(135deg, white 0%, rgba(255,255,255,0.6) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : { color: 'white' }) }}>{friend.name}</h1>
-              {friend.nickname && <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', marginBottom: 10, letterSpacing: '0.01em' }}>"{friend.nickname}"</div>}
+              {friend.nickname && (
+                <p style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '0.9rem', fontStyle: 'italic', color: 'white', opacity: 0.5, marginBottom: 6, marginTop: 0 }}>"{friend.nickname}"</p>
+              )}
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)', marginBottom: 14, lineHeight: 1.5 }}>
                 {[friend.location, friend.met_how, friend.met_date ? `since ${friend.met_date}` : null].filter(Boolean).join(' · ')}
               </p>
@@ -419,7 +430,7 @@ export default function FriendProfile() {
               color: activeTab === tab ? bannerColor : 'var(--text-muted)',
               borderBottom: activeTab === tab ? `2px solid ${bannerColor}` : '2px solid transparent',
               marginBottom: -1, transition: 'color 0.15s',
-            }}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
+            }}>{tab === 'ai' ? 'AI' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
           ))}
         </div>
 
@@ -431,7 +442,6 @@ export default function FriendProfile() {
             <div className="animate-in">
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 'var(--space-xl)' }}>
                 <Link to={`/ai/gifts/${friend.id}`} className="btn btn-ai btn-sm">Gift ideas</Link>
-                <Link to={`/ai/catchup/${friend.id}`} className="btn btn-ai btn-sm">Catch-up brief</Link>
                 <Link to={`/ai/hangout-ideas/${friend.id}`} className="btn btn-ai btn-sm">Hangout ideas</Link>
                 <Link to={`/ai/story/${friend.id}`} className="btn btn-ai btn-sm">Friendship story</Link>
               </div>
@@ -445,12 +455,12 @@ export default function FriendProfile() {
                   <div style={{ marginBottom: 28 }}>
                     {friend.tags.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
-                        <InnerLabel accent={bannerColor}>Tags</InnerLabel>
+                        <InnerLabel accent={bannerColor} fontFamily={fontFamily}>Tags</InnerLabel>
                         <div className="pill-wrap" style={{ marginTop: 8 }}>{friend.tags.map(tag => <span key={tag} className="pill pill-default">{tag}</span>)}</div>
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <InnerLabel accent={bannerColor}>Interests</InnerLabel>
+                      <InnerLabel accent={bannerColor} fontFamily={fontFamily}>Interests</InnerLabel>
                       <button className="btn btn-ghost btn-sm text-sans" style={{ padding: '2px 6px', fontSize: '0.68rem' }} onClick={() => setShowInterestInput(v => !v)}>+ add</button>
                     </div>
                     <div className="pill-wrap" style={{ marginTop: 8 }}>
@@ -489,7 +499,7 @@ export default function FriendProfile() {
                   {/* Contact */}
                   <div style={{ marginBottom: 28, paddingTop: 20, borderTop: `1px solid ${bannerColor}22` }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <InnerLabel accent={bannerColor}>Contact</InnerLabel>
+                      <InnerLabel accent={bannerColor} fontFamily={fontFamily}>Contact</InnerLabel>
                       <button className="btn btn-ghost btn-sm text-sans" style={{ padding: '2px 6px', fontSize: '0.68rem' }} onClick={() => setShowContactModal(true)}>Edit</button>
                     </div>
                     {Object.values(contact).some(Boolean) ? (
@@ -512,7 +522,7 @@ export default function FriendProfile() {
                   {/* Radar */}
                   <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 4 }}>
-                      <InnerLabel accent={bannerColor}>Relationship radar</InnerLabel>
+                      <InnerLabel accent={bannerColor} fontFamily={fontFamily}>Relationship radar</InnerLabel>
                     </div>
                     <RelationshipRadar scores={radarScores} color={bannerColor} size={200} />
                   </div>
@@ -520,7 +530,7 @@ export default function FriendProfile() {
                   {/* Facts */}
                   <div style={{ paddingTop: 20, borderTop: `1px solid ${bannerColor}22` }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <InnerLabel accent={bannerColor}>Facts</InnerLabel>
+                      <InnerLabel accent={bannerColor} fontFamily={fontFamily}>Facts</InnerLabel>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost btn-sm text-sans" style={{ padding: '2px 6px', fontSize: '0.68rem' }} onClick={() => setShowFactModal(true)}>+ add</button>
                         <button className="btn btn-ghost btn-sm text-sans" style={{ padding: '2px 6px', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: 3 }} onClick={() => setShowFactsPanel(true)}><IconExpand size={11} /> all</button>
@@ -545,14 +555,14 @@ export default function FriendProfile() {
               {/* Notes */}
               <div style={{ borderTop: `1px solid ${bannerColor}22`, paddingTop: 'var(--space-xl)', marginBottom: 'var(--space-xl)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-lg)' }}>
-                  <InnerLabel accent={bannerColor}>Notes</InnerLabel>
+                  <InnerLabel accent={bannerColor} fontFamily={fontFamily}>Notes</InnerLabel>
                   <button className="btn btn-ghost btn-sm text-sans" style={{ padding: '2px 8px', fontSize: '0.72rem' }} onClick={() => setShowNoteModal(true)}>+ add</button>
                 </div>
                 {friend.notes.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {friend.notes.map((note, i) => (
                       <div key={note.id} style={{ display: 'flex', gap: 20, alignItems: 'baseline', padding: '10px 0', borderBottom: i < friend.notes.length - 1 ? `1px solid ${bannerColor}18` : 'none' }}>
-                        <span style={{ width: 72, flexShrink: 0, fontSize: '0.7rem', fontFamily: 'var(--font-sans)', color: bannerColor, opacity: 0.55 }}>{note.date}</span>
+                        <span style={{ width: 72, flexShrink: 0, fontSize: '0.72rem', fontFamily: 'var(--font-sans)', color: bannerColor, opacity: 0.8 }}>{note.date}</span>
                         <span style={{ fontFamily: 'var(--font-serif)', fontSize: '0.92rem', lineHeight: 1.6, color: 'var(--text-primary)' }}>{note.text}</span>
                       </div>
                     ))}
@@ -565,7 +575,7 @@ export default function FriendProfile() {
               {/* Hangouts */}
               {friendHangouts.length > 0 && (
                 <div style={{ borderTop: `1px solid ${bannerColor}22`, paddingTop: 'var(--space-xl)' }}>
-                  <InnerLabel accent={bannerColor} style={{ display: 'flex', marginBottom: 'var(--space-lg)' }}>Hangouts</InnerLabel>
+                  <InnerLabel accent={bannerColor} fontFamily={fontFamily} style={{ display: 'flex', marginBottom: 'var(--space-lg)' }}>Hangouts</InnerLabel>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {friendHangouts.map((h, i) => {
                       const hf = h.hangout_friends.find(f => f.friend_id === id)
@@ -607,7 +617,7 @@ export default function FriendProfile() {
           {activeTab === 'gallery' && (
             <div className="animate-in">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
-                <InnerLabel accent={bannerColor}>Photos</InnerLabel>
+                <InnerLabel accent={bannerColor} fontFamily={fontFamily}>Photos</InnerLabel>
                 <button className="btn btn-default btn-sm" onClick={() => galleryInputRef.current?.click()} disabled={galleryUploading}>
                   {galleryUploading ? 'Uploading…' : '+ Add photos'}
                 </button>
@@ -664,7 +674,7 @@ export default function FriendProfile() {
             <div className="animate-in">
               <Link to={`/ai/gifts/${friend.id}`} className="btn btn-ai" style={{ marginBottom: 'var(--space-xl)' }}>AI gift suggestions</Link>
               <div style={{ borderTop: `1px solid ${bannerColor}22`, paddingTop: 'var(--space-xl)' }}>
-                <InnerLabel accent={bannerColor} style={{ display: 'flex', marginBottom: 'var(--space-lg)' }}>Gift history</InnerLabel>
+                <InnerLabel accent={bannerColor} fontFamily={fontFamily} style={{ display: 'flex', marginBottom: 'var(--space-lg)' }}>Gift history</InnerLabel>
                 <div className="empty-state"><p>No gifts logged yet.</p></div>
               </div>
             </div>

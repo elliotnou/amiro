@@ -251,12 +251,16 @@ export default function Hangouts() {
   const [hLocation, setHLocation] = useState('')
   const [hHighlights, setHHighlights] = useState('')
   const [hSelectedFriends, setHSelectedFriends] = useState<string[]>([])
+  const [hSelectedGroups, setHSelectedGroups] = useState<string[]>([])
   const [hFeeling, setHFeeling] = useState('')
   const [album, setAlbum] = useState<AlbumPhoto[]>([])
   const [saving, setSaving] = useState(false)
 
   const toggleFriend = (id: string) =>
     setHSelectedFriends(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
+
+  const toggleGroup = (id: string) =>
+    setHSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id])
 
   const handlePhotoAdd = async (files: FileList) => {
     const slots = MAX_PHOTOS - album.length
@@ -282,7 +286,7 @@ export default function Hangouts() {
 
   const resetForm = () => {
     setHType(''); setHLocation(''); setHHighlights('')
-    setHSelectedFriends([]); setHFeeling(''); setAlbum([])
+    setHSelectedFriends([]); setHSelectedGroups([]); setHFeeling(''); setAlbum([])
     setHDate(new Date().toISOString().slice(0, 10))
   }
 
@@ -291,9 +295,16 @@ export default function Hangouts() {
   const handleLog = async () => {
     if (!hType.trim() || !hLocation.trim() || anyUploading) return
     setSaving(true)
+    // Collect all friend IDs: individually selected + members of selected groups (deduped)
+    const groupMemberIds = groups
+      .filter(g => hSelectedGroups.includes(g.id))
+      .flatMap(g => g.memberIds)
+    const allFriendIds = Array.from(new Set([...hSelectedFriends, ...groupMemberIds]))
+
     const result = await createHangout(
       { type: hType, location: hLocation, date: hDate, highlights: hHighlights || undefined },
-      hSelectedFriends.map(id => ({ id, feeling_label: hFeeling || undefined }))
+      allFriendIds.map(id => ({ id, feeling_label: hFeeling || undefined })),
+      hSelectedGroups
     )
     if (result?.id && user && album.length > 0) {
       const rows = album.filter(p => p.url).map(p => ({ hangout_id: result.id, url: p.url!, user_id: user.id, caption: null, friend_id: null }))
@@ -383,8 +394,6 @@ export default function Hangouts() {
             const banner = bannerMap[h.id]
             const accent = typeAccent(h.type)
             const hasBanner = !!banner
-            const textColor = hasBanner ? 'white' : 'var(--text)'
-            const mutedColor = hasBanner ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)'
 
             return (
               <Link key={h.id} to={`/hangouts/${h.id}`} style={{
@@ -393,68 +402,129 @@ export default function Hangouts() {
                 textDecoration: 'none',
                 border: hasBanner ? '1px solid rgba(255,255,255,0.08)' : '1px solid var(--border)',
                 background: hasBanner ? 'transparent' : 'var(--bg-card)',
-                boxShadow: hasBanner ? '0 4px 20px rgba(0,0,0,0.12)' : 'var(--shadow-sm)',
+                boxShadow: hasBanner ? '0 4px 20px rgba(0,0,0,0.14)' : 'var(--shadow-sm)',
                 transition: 'box-shadow 180ms, transform 180ms',
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = hasBanner ? '0 8px 28px rgba(0,0,0,0.18)' : 'var(--shadow-md)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = hasBanner ? '0 4px 20px rgba(0,0,0,0.12)' : 'var(--shadow-sm)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = hasBanner ? '0 10px 32px rgba(0,0,0,0.22)' : 'var(--shadow-md)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = hasBanner ? '0 4px 20px rgba(0,0,0,0.14)' : 'var(--shadow-sm)' }}
               >
-                {/* Header area */}
-                <div style={{ position: 'relative', height: 130, flexShrink: 0, overflow: 'hidden', background: hasBanner ? 'transparent' : `linear-gradient(140deg, ${accent}20 0%, ${accent}08 100%)` }}>
-                  {hasBanner && <img src={banner} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                  {hasBanner && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%)' }} />}
+                {/* Card — banner: everything on the image; no-banner: header + body */}
+                {hasBanner ? (
+                  <div style={{ position: 'relative', height: 180, overflow: 'hidden' }}>
+                    <img src={banner} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {/* Strong bottom gradient for text legibility */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.72) 100%)' }} />
 
-                  {/* Type badge */}
-                  <div style={{
-                    position: 'absolute', top: 12, left: 12,
-                    background: hasBanner ? 'rgba(0,0,0,0.35)' : `${accent}18`,
-                    backdropFilter: hasBanner ? 'blur(10px)' : undefined,
-                    WebkitBackdropFilter: hasBanner ? 'blur(10px)' : undefined,
-                    border: hasBanner ? '1px solid rgba(255,255,255,0.2)' : `1px solid ${accent}30`,
-                    borderRadius: 'var(--radius-full)', padding: '3px 10px',
-                    color: hasBanner ? 'white' : accent,
-                    fontFamily: 'var(--font-sans)', fontSize: '0.6rem',
-                    fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                  }}>{h.type}</div>
+                    {/* Type badge top-left */}
+                    <div style={{
+                      position: 'absolute', top: 12, left: 12,
+                      background: 'rgba(0,0,0,0.40)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.18)', borderRadius: 'var(--radius-full)', padding: '3px 10px',
+                      color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.6rem',
+                      fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                    }}>{h.type}</div>
 
-                  {/* Large symbol watermark for no-banner */}
-                  {!hasBanner && (
-                    <div style={{ position: 'absolute', right: 14, bottom: 4, fontSize: '4rem', color: accent, opacity: 0.12, lineHeight: 1, userSelect: 'none', fontFamily: 'var(--font-serif)' }}>
-                      {h.type[0]?.toUpperCase()}
+                    {/* Bottom text + avatars ON the image */}
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 14px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1rem', fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>{h.location}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.72)' }}>{h.date}</span>
+                          {h.hangout_groups.map(hg => (
+                            <span key={hg.id} style={{
+                              padding: '1px 7px', borderRadius: 'var(--radius-sm)',
+                              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.22)',
+                              color: 'rgba(255,255,255,0.88)', fontFamily: 'var(--font-sans)', fontSize: '0.6rem', fontWeight: 600,
+                            }}>{hg.group_symbol} {hg.group_name}</span>
+                          ))}
+                        </div>
+                      </div>
+                      {h.hangout_friends.length > 0 && (
+                        <div style={{ display: 'flex', flexShrink: 0 }}>
+                          {h.hangout_friends.slice(0, 4).map((hf, i) => {
+                            const fr = friends.find(f => f.id === hf.friend_id)
+                            return (
+                              <div key={hf.id} style={{
+                                width: 28, height: 28, borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.22)', border: '2px solid rgba(255,255,255,0.5)',
+                                backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontFamily: 'var(--font-serif)', fontSize: '0.52rem', fontWeight: 600,
+                                color: 'white', marginLeft: i > 0 ? -8 : 0, position: 'relative', zIndex: 4 - i,
+                                overflow: 'hidden', flexShrink: 0,
+                              }}>
+                                {fr?.avatar_url
+                                  ? <img src={fr.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  : hf.friend_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                {/* Body */}
-                <div style={{ padding: '14px 16px 16px', background: hasBanner ? 'rgba(0,0,0,0.72)' : 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10, backdropFilter: hasBanner ? 'blur(0px)' : undefined }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1rem', fontWeight: 500, color: textColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>{h.location}</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: mutedColor }}>{h.date}</div>
                   </div>
-                  {h.hangout_friends.length > 0 && (
-                    <div style={{ display: 'flex', flexShrink: 0 }}>
-                      {h.hangout_friends.slice(0, 4).map((hf, i) => {
-                        const fr = friends.find(f => f.id === hf.friend_id)
-                        return (
-                          <div key={hf.id} style={{
-                            width: 26, height: 26, borderRadius: '50%',
-                            background: hasBanner ? 'rgba(255,255,255,0.2)' : (fr?.avatar_color ?? accent),
-                            border: `2px solid ${hasBanner ? 'rgba(255,255,255,0.45)' : 'var(--bg-card)'}`,
-                            backdropFilter: hasBanner ? 'blur(4px)' : undefined,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontFamily: 'var(--font-serif)', fontSize: '0.52rem', fontWeight: 600,
-                            color: 'white', marginLeft: i > 0 ? -7 : 0, position: 'relative', zIndex: 4 - i,
-                            overflow: 'hidden', flexShrink: 0,
-                          }}>
-                            {fr?.avatar_url
-                              ? <img src={fr.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : hf.friend_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
-                          </div>
-                        )
-                      })}
+                ) : (
+                  <>
+                    {/* No-banner: colored header area */}
+                    <div style={{ position: 'relative', height: 90, flexShrink: 0, overflow: 'hidden', background: `linear-gradient(140deg, ${accent}22 0%, ${accent}08 100%)` }}>
+                      {/* Type badge */}
+                      <div style={{
+                        position: 'absolute', top: 12, left: 12,
+                        background: `${accent}18`, border: `1px solid ${accent}30`,
+                        borderRadius: 'var(--radius-full)', padding: '3px 10px',
+                        color: accent, fontFamily: 'var(--font-sans)', fontSize: '0.6rem',
+                        fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                      }}>{h.type}</div>
+                      <div style={{ position: 'absolute', right: 14, bottom: 4, fontSize: '3.5rem', color: accent, opacity: 0.1, lineHeight: 1, userSelect: 'none', fontFamily: 'var(--font-serif)' }}>
+                        {h.type[0]?.toUpperCase()}
+                      </div>
                     </div>
-                  )}
-                </div>
+
+                    {/* Body */}
+                    <div style={{ padding: '12px 14px 14px', background: 'var(--bg-card)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: h.hangout_groups.length > 0 ? 8 : 0 }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.97rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>{h.location}</div>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>{h.date}</div>
+                        </div>
+                        {h.hangout_friends.length > 0 && (
+                          <div style={{ display: 'flex', flexShrink: 0 }}>
+                            {h.hangout_friends.slice(0, 4).map((hf, i) => {
+                              const fr = friends.find(f => f.id === hf.friend_id)
+                              return (
+                                <div key={hf.id} style={{
+                                  width: 26, height: 26, borderRadius: '50%',
+                                  background: fr?.avatar_color ?? accent,
+                                  border: '2px solid var(--bg-card)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontFamily: 'var(--font-serif)', fontSize: '0.52rem', fontWeight: 600,
+                                  color: 'white', marginLeft: i > 0 ? -7 : 0, position: 'relative', zIndex: 4 - i,
+                                  overflow: 'hidden', flexShrink: 0,
+                                }}>
+                                  {fr?.avatar_url
+                                    ? <img src={fr.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    : hf.friend_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      {h.hangout_groups.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {h.hangout_groups.map(hg => (
+                            <span key={hg.id} style={{
+                              padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                              background: `${hg.group_color}14`, border: `1px solid ${hg.group_color}30`,
+                              color: hg.group_color, fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 600,
+                              display: 'inline-flex', alignItems: 'center', gap: 3,
+                            }}>{hg.group_symbol} {hg.group_name}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </Link>
             )
           })}
@@ -530,29 +600,71 @@ export default function Hangouts() {
           <input className="form-input" placeholder="Where?" value={hLocation} onChange={e => setHLocation(e.target.value)} />
         </div>
 
-        {friends.length > 0 && (
-          <div className="form-group">
-            <label className="form-label">Who was there</label>
-            {groups.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                {groups.map(g => (
-                  <button key={g.id} onClick={() => g.memberIds.forEach(id => { if (!hSelectedFriends.includes(id)) toggleFriend(id) })}
-                    style={{ padding: '3px 10px', borderRadius: 'var(--radius-full)', border: `1.5px solid ${g.color}40`, background: `${g.color}10`, color: g.color, fontFamily: 'var(--font-sans)', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
-                    {g.symbol} {g.name}
-                  </button>
-                ))}
+        <div className="form-group">
+          <label className="form-label">Who was there</label>
+
+          {/* Groups — tagged as units */}
+          {groups.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.64rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Groups</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {groups.map(g => {
+                  const selected = hSelectedGroups.includes(g.id)
+                  const memberNames = g.memberIds.map(id => friends.find(f => f.id === id)?.name.split(' ')[0]).filter(Boolean)
+                  return (
+                    <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button onClick={() => toggleGroup(g.id)}
+                        style={{
+                          padding: '5px 12px', borderRadius: 'var(--radius-md)',
+                          border: selected ? `1.5px solid ${g.color}` : `1.5px solid ${g.color}40`,
+                          background: selected ? `${g.color}18` : 'transparent',
+                          color: selected ? g.color : `${g.color}90`,
+                          fontFamily: 'var(--font-sans)', fontSize: '0.75rem', fontWeight: 600,
+                          cursor: 'pointer', transition: 'all 0.15s',
+                          display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                        }}>
+                        <span style={{ fontSize: '0.85rem' }}>{g.symbol}</span>
+                        {g.name}
+                      </button>
+                      {selected && memberNames.length > 0 && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          — {memberNames.join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-            )}
-            <div className="pill-wrap">
-              {friends.map(f => (
-                <button key={f.id} className="pill pill-default" style={{ cursor: 'pointer', opacity: hSelectedFriends.includes(f.id) ? 1 : 0.45 }} onClick={() => toggleFriend(f.id)}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: f.avatar_color, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-                  {f.name.split(' ')[0]}
-                </button>
-              ))}
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Individual friends — hide members already covered by selected groups */}
+          {friends.length > 0 && (() => {
+            const coveredIds = new Set(
+              groups.filter(g => hSelectedGroups.includes(g.id)).flatMap(g => g.memberIds)
+            )
+            const uncoveredFriends = friends.filter(f => !coveredIds.has(f.id))
+            if (uncoveredFriends.length === 0 && hSelectedFriends.length === 0) return null
+            return (
+              <div>
+                {groups.length > 0 && <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.64rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Individuals</div>}
+                <div className="pill-wrap">
+                  {uncoveredFriends.map(f => {
+                    const selected = hSelectedFriends.includes(f.id)
+                    return (
+                      <button key={f.id} className="pill pill-default"
+                        style={{ cursor: 'pointer', opacity: selected ? 1 : 0.4 }}
+                        onClick={() => toggleFriend(f.id)}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: f.avatar_color, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
+                        {f.name.split(' ')[0]}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+        </div>
 
         <div className="form-group">
           <label className="form-label">How did it feel?</label>

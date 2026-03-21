@@ -261,7 +261,7 @@ img { display: block; max-width: 100%; }
 
 .sidebar-bottom {
   margin-top: auto;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-md) 0;
 }
 
 /* ── Main content ── */
