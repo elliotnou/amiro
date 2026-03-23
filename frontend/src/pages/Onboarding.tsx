@@ -32,7 +32,7 @@ export default function Onboarding() {
           <div style={{
             fontFamily: 'var(--font-serif)', fontSize: '2.2rem', fontWeight: 600,
             letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: 6,
-          }}>amiro</div>
+          }}>amily</div>
           <p style={{
             fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-muted)',
             letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -53,7 +53,7 @@ export default function Onboarding() {
             fontFamily: 'var(--font-sans)', fontSize: '0.86rem', color: 'var(--text-secondary)',
             lineHeight: 1.75, marginBottom: 'var(--space-xl)',
           }}>
-            Amiro helps you stay close to the people who matter — remember what's important to them,
+            Amily helps you stay close to the people who matter — remember what's important to them,
             log your time together, and notice when a friendship is drifting.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
