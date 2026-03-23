@@ -69,7 +69,7 @@ function GroupCard({ group, members, onClick }: {
         background: `linear-gradient(140deg, ${group.color}14 0%, ${group.color}05 100%)`,
         border: `1px solid ${hovered ? group.color + '60' : group.color + '28'}`,
         borderRadius: 'var(--radius-xl)',
-        padding: group.avatar_url ? '0 24px 20px' : '22px 24px 20px',
+        padding: group.avatar_url ? '0 22px 20px' : '22px 24px 20px',
         cursor: 'pointer',
         overflow: 'hidden',
         transition: 'transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease',
@@ -77,7 +77,7 @@ function GroupCard({ group, members, onClick }: {
         boxShadow: hovered
           ? `0 12px 40px ${group.color}22, 0 2px 8px rgba(0,0,0,0.06)`
           : '0 2px 8px rgba(0,0,0,0.04)',
-        minHeight: 180,
+        minHeight: group.avatar_url ? 260 : 180,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -105,16 +105,16 @@ function GroupCard({ group, members, onClick }: {
       {group.avatar_url && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0,
-          height: 120, overflow: 'hidden',
+          height: 168, overflow: 'hidden',
           borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
         }}>
           <img src={group.avatar_url} alt={group.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to bottom, transparent 40%, ${group.color}22 100%)` }} />
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.18) 100%)` }} />
         </div>
       )}
 
       {/* Top: symbol badge + name */}
-      <div style={{ paddingTop: group.avatar_url ? 132 : 0 }}>
+      <div style={{ paddingTop: group.avatar_url ? 182 : 0 }}>
         {!group.avatar_url && (
           <div style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -266,7 +266,7 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
             <div style={{ overflowY: 'auto', padding: '20px 22px 26px', flex: 1 }}>
 
               {/* Banner image */}
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.67rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Banner image</p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.67rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Group photo</p>
               <div
                 onClick={() => avatarInputRef.current?.click()}
                 style={{
@@ -281,12 +281,20 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
                   ? <img src={avatarPreview} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color, opacity: 0.6 }}>
                       <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem' }}>Upload banner</span>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem' }}>Upload photo</span>
                     </div>
                 }
                 {avatarPreview && (
-                  <div style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.5)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.68rem', backdropFilter: 'blur(4px)' }}>
-                    Change
+                  <div style={{ position: 'absolute', bottom: 6, right: 6, display: 'flex', gap: 4 }}>
+                    <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.68rem', backdropFilter: 'blur(4px)' }}>
+                      Change
+                    </div>
+                    <div
+                      onClick={e => { e.stopPropagation(); setAvatarPreview(null); setAvatarFile(null) }}
+                      style={{ background: 'rgba(180,0,0,0.65)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.68rem', backdropFilter: 'blur(4px)', cursor: 'pointer' }}
+                    >
+                      Remove
+                    </div>
                   </div>
                 )}
                 <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
@@ -424,12 +432,20 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
                   ? <img src={avatarPreview} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <div style={{ display: 'flex', alignItems: 'center', gap: 8, color, opacity: 0.6 }}>
                       <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem' }}>Add a banner image (optional)</span>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem' }}>Add a group photo (optional)</span>
                     </div>
                 }
                 {avatarPreview && (
-                  <div style={{ position: 'absolute', bottom: 5, right: 5, background: 'rgba(0,0,0,0.5)', borderRadius: 'var(--radius-sm)', padding: '2px 7px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.66rem', backdropFilter: 'blur(4px)' }}>
-                    Change
+                  <div style={{ position: 'absolute', bottom: 5, right: 5, display: 'flex', gap: 4 }}>
+                    <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: 'var(--radius-sm)', padding: '2px 7px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.66rem', backdropFilter: 'blur(4px)' }}>
+                      Change
+                    </div>
+                    <div
+                      onClick={e => { e.stopPropagation(); setAvatarPreview(null); setAvatarFile(null) }}
+                      style={{ background: 'rgba(180,0,0,0.65)', borderRadius: 'var(--radius-sm)', padding: '2px 7px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.66rem', backdropFilter: 'blur(4px)', cursor: 'pointer' }}
+                    >
+                      Remove
+                    </div>
                   </div>
                 )}
                 <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
