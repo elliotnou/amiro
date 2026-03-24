@@ -141,6 +141,26 @@ function FreshnessRing({ percentage, color, size = 140, trackColor }: { percenta
   )
 }
 
+function MiniToggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <div onClick={() => onChange(!checked)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', marginBottom: 'var(--space-lg)' }}>
+      <div style={{
+        width: 32, height: 18, borderRadius: 9, position: 'relative',
+        background: checked ? 'var(--text-secondary)' : 'var(--border)',
+        transition: 'background 180ms ease', flexShrink: 0,
+      }}>
+        <div style={{
+          position: 'absolute', top: 3, left: checked ? 17 : 3,
+          width: 12, height: 12, borderRadius: '50%', background: 'white',
+          transition: 'left 180ms ease',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+        }} />
+      </div>
+      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{label}</span>
+    </div>
+  )
+}
+
 function InnerLabel({ children, style, accent, fontFamily }: { children: React.ReactNode; style?: React.CSSProperties; accent?: string; fontFamily?: string }) {
   return (
     <span style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '0.7rem', fontWeight: 700, color: accent || 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', ...style as object }}>
@@ -187,19 +207,24 @@ export default function FriendProfile() {
   const [themeColor, setThemeColor] = useState<string | null>(null)
   const [profileFont, setProfileFont] = useState('default')
   const [effect, setEffect] = useState('none')
+  const [headerPattern, setHeaderPattern] = useState('none')
+  const [vibeWord, setVibeWord] = useState('')
 
   useEffect(() => {
     if (!id) return
     supabase
       .from('profile_customizations')
-      .select('theme_color, font, effect')
+      .select('theme_color, font, effect, pattern, vibe_word')
       .eq('friend_id', id)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          setThemeColor(data.theme_color ?? null)
-          setProfileFont(data.font ?? 'default')
-          setEffect(data.effect ?? 'none')
+          const d = data as any
+          setThemeColor(d.theme_color ?? null)
+          setProfileFont(d.font ?? 'default')
+          setEffect(d.effect ?? 'none')
+          setHeaderPattern(d.pattern ?? 'none')
+          setVibeWord(d.vibe_word ?? '')
         }
       })
   }, [id])
@@ -277,12 +302,14 @@ export default function FriendProfile() {
   // ── Impression modal state ──
   const [impTitle, setImpTitle] = useState('')
   const [impBody, setImpBody] = useState('')
+  const [impHidden, setImpHidden] = useState(false)
   const [openImpressionId, setOpenImpressionId] = useState<string | null>(null)
   const [confirmDeleteImpId, setConfirmDeleteImpId] = useState<string | null>(null)
   const [savingImp, setSavingImp] = useState(false)
   const [editingImp, setEditingImp] = useState(false)
   const [editImpTitle, setEditImpTitle] = useState('')
   const [editImpBody, setEditImpBody] = useState('')
+  const [editImpHidden, setEditImpHidden] = useState(false)
   const [impSearch, setImpSearch] = useState('')
   const [showStoryVibes, setShowStoryVibes] = useState(false)
   const [showAllInterests, setShowAllInterests] = useState(false)
@@ -295,7 +322,6 @@ export default function FriendProfile() {
     instagram: useRef<HTMLInputElement>(null),
     twitter: useRef<HTMLInputElement>(null),
     linkedin: useRef<HTMLInputElement>(null),
-    snapchat: useRef<HTMLInputElement>(null),
   }
   const [savingContact, setSavingContact] = useState(false)
 
@@ -383,10 +409,10 @@ export default function FriendProfile() {
   const radarScores = computeRadarScores({
     hangouts: friendHangouts.map(h => ({ date: h.date })),
     hangoutCount: friendHangouts.length,
+    metDate: friend.met_date ?? null,
     noteCount: friend.notes.length,
     impressionCount: impressions.length,
     factCount: friend.facts.length,
-    contact: friend.contact,
   })
 
   const handleSaveFact = async () => {
@@ -416,9 +442,9 @@ export default function FriendProfile() {
   const handleSaveImpression = async () => {
     if (!impBody.trim()) return
     setSavingImp(true)
-    await createImpression(impTitle || 'Impression', impBody)
+    await createImpression(impTitle || 'Impression', impBody, impHidden)
     setSavingImp(false)
-    setShowImpressionModal(false); setImpTitle(''); setImpBody('')
+    setShowImpressionModal(false); setImpTitle(''); setImpBody(''); setImpHidden(false)
   }
 
   const handleSaveContact = async () => {
@@ -429,7 +455,7 @@ export default function FriendProfile() {
       instagram: contactRef.instagram.current?.value || null,
       twitter: contactRef.twitter.current?.value || null,
       linkedin: contactRef.linkedin.current?.value || null,
-      snapchat: contactRef.snapchat.current?.value || null,
+      snapchat: null,
     })
     setSavingContact(false)
     setShowContactModal(false)
@@ -446,6 +472,11 @@ export default function FriendProfile() {
 
   return (
     <div className="page-container" style={{ maxWidth: 1080, ...(fontFamily ? { fontFamily } : {}) }}>
+      <style>{`
+.bday-badge::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: white; font-size: 0.68rem; font-family: var(--font-sans); padding: 3px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 150ms; }
+        .bday-badge { position: relative; }
+        .bday-badge:hover::after { opacity: 1; }
+      `}</style>
 
       {/* Back link — outside the card */}
       <div className="animate-in" style={{ marginBottom: 'var(--space-md)' }}>
@@ -470,7 +501,35 @@ export default function FriendProfile() {
             : bannerColor,
           padding: '44px 48px 40px',
           position: 'relative',
+          overflow: 'hidden',
         }}>
+
+          {/* Pattern overlay */}
+          {headerPattern !== 'none' && (() => {
+            const patternStyle: React.CSSProperties = {
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              ...(headerPattern === 'dots'
+                ? { backgroundImage: 'radial-gradient(rgba(255,255,255,0.55) 1.5px, transparent 1.5px)', backgroundSize: '20px 20px', opacity: 0.5 }
+                : headerPattern === 'grid'
+                ? { backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '28px 28px', opacity: 0.45 }
+                : {}),
+            }
+            return <div style={patternStyle} />
+          })()}
+
+          {/* Vibe word watermark */}
+          {vibeWord && (
+            <div style={{
+              position: 'absolute', bottom: -8, right: 36,
+              fontFamily: 'var(--font-serif)', fontSize: '5.5rem', fontWeight: 700,
+              color: 'rgba(255,255,255,0.10)', letterSpacing: '-0.03em',
+              lineHeight: 1, userSelect: 'none', pointerEvents: 'none',
+              fontStyle: 'italic', whiteSpace: 'nowrap',
+            }}>
+              {vibeWord}
+            </div>
+          )}
+
           <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 8 }}>
             <button onClick={openEditInfo} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 'var(--radius-full)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' as any }} title="Edit info"><IconPencil size={15} /></button>
             <button onClick={() => setShowCustomize(true)} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 'var(--radius-full)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' as any }} title="Customize style"><IconPaintbrush size={16} /></button>
@@ -631,7 +690,6 @@ export default function FriendProfile() {
                         {contact.instagram && <ContactRow icon={<IconLink size={12} />} value={contact.instagram} bg="var(--inner-circle-bg)" color="var(--inner-circle)" />}
                         {contact.twitter && <ContactRow icon={<IconLink size={12} />} value={contact.twitter} bg="var(--close-friend-bg)" color="var(--close-friend)" />}
                         {contact.linkedin && <ContactRow icon={<IconLink size={12} />} value={contact.linkedin} bg="var(--accent-bg)" color="var(--accent)" />}
-                        {contact.snapchat && <ContactRow icon={<IconLink size={12} />} value={contact.snapchat} bg="var(--casual-bg)" color="var(--casual)" />}
                       </div>
                     ) : (
                       <button className="btn btn-ghost btn-sm" onClick={() => setShowContactModal(true)} style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>+ Add contact info</button>
@@ -739,10 +797,13 @@ export default function FriendProfile() {
                 )}
               </div>
               {impressions.length > 0 ? impressions.filter(imp => !impSearch.trim() || imp.title.toLowerCase().includes(impSearch.toLowerCase())).map(imp => (
-                <div key={imp.id} className="impression" style={{ borderLeftColor: bannerColor, cursor: 'pointer' }} onClick={() => { setOpenImpressionId(imp.id); setConfirmDeleteImpId(null) }}>
+                <div key={imp.id} className="impression" style={{ borderLeftColor: bannerColor, cursor: 'pointer', opacity: imp.hidden_from_ai ? 0.6 : 1 }} onClick={() => { setOpenImpressionId(imp.id); setConfirmDeleteImpId(null) }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
                     <div className="impression-title">{imp.title}</div>
-                    <div className="impression-date" style={{ flexShrink: 0 }}>{imp.date}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {imp.hidden_from_ai && <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.65rem', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '1px 7px' }}>hidden from AI</span>}
+                      <div className="impression-date">{imp.date}</div>
+                    </div>
                   </div>
                 </div>
               )) : (
@@ -754,13 +815,34 @@ export default function FriendProfile() {
           {/* GALLERY */}
           {activeTab === 'gallery' && (
             <div className="animate-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
-                <InnerLabel accent={bannerColor} fontFamily={fontFamily}>Photos</InnerLabel>
-                <button className="btn btn-default btn-sm" onClick={() => galleryInputRef.current?.click()} disabled={galleryUploading}>
-                  {galleryUploading ? 'Uploading…' : '+ Add photos'}
-                </button>
-              </div>
-              <input ref={galleryInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={async e => { const files = Array.from(e.target.files ?? []); for (const file of files) await uploadPhoto(file); e.target.value = '' }} />
+              {(() => {
+                const LIMIT = subStatus === 'active' ? 500 : 50
+                const atLimit = galleryImages.length >= LIMIT
+                return (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
+                      <InnerLabel accent={bannerColor} fontFamily={fontFamily}>
+                        Photos ({galleryImages.length}/{LIMIT})
+                      </InnerLabel>
+                      {atLimit ? (
+                        subStatus === 'active'
+                          ? <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>500 photo limit reached</span>
+                          : <Link to="/upgrade" className="btn btn-default btn-sm" style={{ fontSize: '0.72rem', color: 'var(--ai)' }}>Upgrade for more</Link>
+                      ) : (
+                        <button className="btn btn-default btn-sm" onClick={() => galleryInputRef.current?.click()} disabled={galleryUploading}>
+                          {galleryUploading ? 'Uploading…' : '+ Add photos'}
+                        </button>
+                      )}
+                    </div>
+                    <input ref={galleryInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={async e => {
+                      if (atLimit) return
+                      const files = Array.from(e.target.files ?? []).slice(0, LIMIT - galleryImages.length)
+                      for (const file of files) await uploadPhoto(file)
+                      e.target.value = ''
+                    }} />
+                  </>
+                )
+              })()}
               {galleryImages.length > 0 ? (
                 <div className="gallery-grid">
                   {galleryImages.map((img, i) => (
@@ -936,7 +1018,7 @@ export default function FriendProfile() {
           { name: 'Depth',       desc: "How much you've written about them — notes and impressions combined. Maxes at 10+ entries.",                            tip: 'Write a note or impression after your next hangout.' },
           { name: 'Knowledge',   desc: 'Facts you\'ve recorded about them (likes, quirks, life details). Maxes at 8+ facts.',                                  tip: 'Add facts from the Overview tab.' },
           { name: 'Consistency', desc: 'How regularly you hang out. A steady cadence scores higher than sporadic bursts.',                                      tip: 'Aim for a regular rhythm rather than gaps and clusters.' },
-          { name: 'Contact',     desc: 'How complete their contact info is — phone, email, Instagram, Twitter, LinkedIn, Snapchat.',                           tip: 'Fill in contact details from the Overview tab.' },
+          { name: 'Longevity',   desc: 'How long you\'ve known each other, based on when you met. Maxes at 5+ years.',                                        tip: 'Set the "Met" date on their profile to unlock this.' },
         ] as const).map((item, i, arr) => (
           <div key={item.name} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -1008,6 +1090,7 @@ export default function FriendProfile() {
         <div className="form-group">
           <textarea className="form-textarea form-textarea-serif" placeholder="Write freely. This is just for you..." value={impBody} onChange={e => setImpBody(e.target.value)} />
         </div>
+        <MiniToggle checked={impHidden} onChange={setImpHidden} label="Hide from AI" />
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={() => setShowImpressionModal(false)}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSaveImpression} disabled={savingImp || !impBody.trim()}>{savingImp ? 'Saving…' : 'Save'}</button>
@@ -1030,11 +1113,12 @@ export default function FriendProfile() {
                 <div className="form-group">
                   <textarea className="form-textarea form-textarea-serif" placeholder="Write freely..." value={editImpBody} onChange={e => setEditImpBody(e.target.value)} />
                 </div>
+                <MiniToggle checked={editImpHidden} onChange={setEditImpHidden} label="Hide from AI" />
                 <div className="modal-actions">
                   <button className="btn btn-ghost" onClick={() => setEditingImp(false)}>Cancel</button>
                   <button className="btn btn-primary" disabled={savingImp || !editImpBody.trim()} onClick={async () => {
                     setSavingImp(true)
-                    await updateImpression(imp.id, editImpTitle || 'Impression', editImpBody)
+                    await updateImpression(imp.id, editImpTitle || 'Impression', editImpBody, editImpHidden)
                     setSavingImp(false)
                     setEditingImp(false)
                   }}>{savingImp ? 'Saving…' : 'Save'}</button>
@@ -1054,7 +1138,7 @@ export default function FriendProfile() {
                   ) : (
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="btn btn-ghost" style={{ color: 'var(--text-muted)' }} onClick={() => setConfirmDeleteImpId(imp.id)}>Delete</button>
-                      <button className="btn btn-ghost" onClick={() => { setEditImpTitle(imp.title); setEditImpBody(imp.body); setEditingImp(true) }}>Edit</button>
+                      <button className="btn btn-ghost" onClick={() => { setEditImpTitle(imp.title); setEditImpBody(imp.body); setEditImpHidden(imp.hidden_from_ai ?? false); setEditingImp(true) }}>Edit</button>
                     </div>
                   )}
                   <button className="btn btn-ghost" onClick={closeModal}>Close</button>
@@ -1177,12 +1261,26 @@ export default function FriendProfile() {
       {/* ── Customize Style Modal ── */}
       <Modal open={showCustomize} onClose={() => setShowCustomize(false)} title="Customize style">
         <div style={{
-          padding: '12px 16px', borderRadius: 'var(--radius-md)',
-          background: bannerColor, marginBottom: 'var(--space-lg)',
+          padding: '16px 18px', borderRadius: 'var(--radius-md)',
+          background: effect === 'gradient'
+            ? `linear-gradient(135deg, ${bannerColor} 0%, ${lightenHex(bannerColor, 55)} 100%)`
+            : bannerColor,
+          marginBottom: 'var(--space-lg)',
+          position: 'relative', overflow: 'hidden',
           ...(effect === 'glow' ? { boxShadow: `0 0 30px ${bannerColor}44` } : {}),
         }}>
-          <span style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 500, ...(effect === 'gradient' ? { background: 'linear-gradient(135deg,white,rgba(255,255,255,0.6))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' } : { color: 'white' }) }}>{friend.name}</span>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>Preview</p>
+          {headerPattern !== 'none' && (() => {
+            const s: React.CSSProperties = {
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              ...(headerPattern === 'dots' ? { backgroundImage: 'radial-gradient(rgba(255,255,255,0.55) 1.5px, transparent 1.5px)', backgroundSize: '20px 20px', opacity: 0.5 }
+                : headerPattern === 'grid' ? { backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '28px 28px', opacity: 0.45 }
+                : {}),
+            }
+            return <div style={s} />
+          })()}
+          {vibeWord && <div style={{ position: 'absolute', bottom: -6, right: 10, fontFamily: 'var(--font-serif)', fontSize: '2.4rem', fontWeight: 700, color: 'rgba(255,255,255,0.12)', fontStyle: 'italic', userSelect: 'none', whiteSpace: 'nowrap' }}>{vibeWord}</div>}
+          <span style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 500, position: 'relative', ...(effect === 'gradient' ? { background: 'linear-gradient(135deg,white,rgba(255,255,255,0.6))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' } : { color: 'white' }) }}>{friend.name}</span>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginTop: 4, position: 'relative' }}>Preview</p>
         </div>
 
         <div className="form-group">
@@ -1212,11 +1310,15 @@ export default function FriendProfile() {
           </div>
         </div>
         <div className="form-group">
-          <label className="form-label">Effects</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[{key:'none',label:'None'},{key:'glow',label:'Glow'},{key:'gradient',label:'Gradient text'}].map(e => (
+          <label className="form-label">Header effect</label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              { key: 'none', label: 'Flat' },
+              { key: 'gradient', label: 'Gradient' },
+              { key: 'glow', label: 'Glow' },
+            ].map(e => (
               <button key={e.key} onClick={() => setEffect(e.key)} style={{
-                padding: '8px 16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '0.78rem',
+                padding: '8px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '0.78rem',
                 border: effect === e.key ? `2px solid ${bannerColor}` : '2px solid var(--border)',
                 background: effect === e.key ? `${bannerColor}10` : 'var(--bg)',
                 color: effect === e.key ? bannerColor : 'var(--text-muted)', transition: 'all 0.2s',
@@ -1224,12 +1326,39 @@ export default function FriendProfile() {
             ))}
           </div>
         </div>
+        <div className="form-group">
+          <label className="form-label">Header pattern</label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              { key: 'none', label: 'None' },
+              { key: 'dots', label: '· · · Dots' },
+              { key: 'grid', label: '⊞ Grid' },
+            ].map(p => (
+              <button key={p.key} onClick={() => setHeaderPattern(p.key)} style={{
+                padding: '8px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '0.78rem',
+                border: headerPattern === p.key ? `2px solid ${bannerColor}` : '2px solid var(--border)',
+                background: headerPattern === p.key ? `${bannerColor}10` : 'var(--bg)',
+                color: headerPattern === p.key ? bannerColor : 'var(--text-muted)', transition: 'all 0.2s',
+              }}>{p.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Tagline <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>— watermark in header</span></label>
+          <input
+            className="form-input"
+            placeholder="e.g. sunshine, wildcard, ride or die…"
+            value={vibeWord}
+            onChange={e => setVibeWord(e.target.value.slice(0, 18))}
+            style={{ fontFamily: 'var(--font-serif)', fontSize: '0.95rem', fontStyle: vibeWord ? 'italic' : 'normal' }}
+          />
+        </div>
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={() => setShowCustomize(false)}>Cancel</button>
           <button className="btn btn-primary" onClick={async () => {
             if (user && id) {
               await supabase.from('profile_customizations').upsert(
-                { user_id: user.id, friend_id: id, theme_color: themeColor, font: profileFont, effect },
+                { user_id: user.id, friend_id: id, theme_color: themeColor, font: profileFont, effect, pattern: headerPattern, vibe_word: vibeWord || null } as any,
                 { onConflict: 'user_id,friend_id' }
               )
             }
@@ -1240,10 +1369,16 @@ export default function FriendProfile() {
 
       {/* Edit Contact */}
       <Modal open={showContactModal} onClose={() => setShowContactModal(false)} title="Edit contact info" style={{ overflowY: 'visible' }}>
-        {(['phone','email','instagram','twitter','linkedin','snapchat'] as const).map(field => (
+        {([
+          { field: 'phone', label: 'Phone', placeholder: '(555) 000-0000' },
+          { field: 'email', label: 'Email', placeholder: 'name@email.com' },
+          { field: 'instagram', label: 'Instagram', placeholder: '@username' },
+          { field: 'twitter', label: 'Link', placeholder: 'https://...' },
+          { field: 'linkedin', label: 'Other link', placeholder: 'https://...' },
+        ] as const).map(({ field, label, placeholder }) => (
           <div key={field} className="form-group">
-            <label className="form-label">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
-            <input className="form-input" ref={contactRef[field]} defaultValue={contact[field] || ''} placeholder={field === 'phone' ? '(555) 000-0000' : field === 'email' ? 'name@email.com' : '@username'} />
+            <label className="form-label">{label}</label>
+            <input className="form-input" ref={contactRef[field]} defaultValue={contact[field] || ''} placeholder={placeholder} />
           </div>
         ))}
         <div className="modal-actions">

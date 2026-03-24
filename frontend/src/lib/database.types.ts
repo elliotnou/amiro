@@ -219,6 +219,7 @@ export type Database = {
           body: string
           date: string
           created_at: string
+          hidden_from_ai: boolean
         }
         Insert: {
           id?: string
@@ -227,11 +228,13 @@ export type Database = {
           title: string
           body: string
           date?: string
+          hidden_from_ai?: boolean
         }
         Update: {
           title?: string
           body?: string
           date?: string
+          hidden_from_ai?: boolean
         }
         Relationships: []
       }

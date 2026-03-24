@@ -6,13 +6,13 @@ interface Props {
     depth: number
     knowledge: number
     consistency: number
-    contact: number
+    longevity: number
   }
   color: string
   size?: number
 }
 
-const AXES = ['Recency', 'Closeness', 'Depth', 'Knowledge', 'Consistency', 'Contact'] as const
+const AXES = ['Recency', 'Closeness', 'Depth', 'Knowledge', 'Consistency', 'Longevity'] as const
 const N = AXES.length
 
 function polarToXY(cx: number, cy: number, angle: number, r: number) {
@@ -34,7 +34,7 @@ export default function RelationshipRadar({ scores, color, size = 220 }: Props) 
     scores.depth,
     scores.knowledge,
     scores.consistency,
-    scores.contact,
+    scores.longevity,
   ].map(v => Math.max(0, Math.min(100, v)))
 
   const angleStep = (2 * Math.PI) / N

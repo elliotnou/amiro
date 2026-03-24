@@ -24,7 +24,7 @@ export function useImpressions(friendId: string | undefined) {
 
   useEffect(() => { load() }, [load])
 
-  const createImpression = async (title: string, body: string) => {
+  const createImpression = async (title: string, body: string, hiddenFromAI = false) => {
     if (!user || !friendId) return
     await supabase.from('impressions').insert({
       user_id: user.id,
@@ -32,13 +32,16 @@ export function useImpressions(friendId: string | undefined) {
       title,
       body,
       date: new Date().toISOString().slice(0, 10),
+      hidden_from_ai: hiddenFromAI,
     })
     await load()
   }
 
-  const updateImpression = async (id: string, title: string, body: string) => {
-    await supabase.from('impressions').update({ title, body }).eq('id', id)
-    setImpressions(prev => prev.map(i => i.id === id ? { ...i, title, body } : i))
+  const updateImpression = async (id: string, title: string, body: string, hiddenFromAI?: boolean) => {
+    const updates: Record<string, unknown> = { title, body }
+    if (hiddenFromAI !== undefined) updates.hidden_from_ai = hiddenFromAI
+    await supabase.from('impressions').update(updates).eq('id', id)
+    setImpressions(prev => prev.map(i => i.id === id ? { ...i, title, body, ...(hiddenFromAI !== undefined ? { hidden_from_ai: hiddenFromAI } : {}) } : i))
   }
 
   const deleteImpression = async (id: string) => {

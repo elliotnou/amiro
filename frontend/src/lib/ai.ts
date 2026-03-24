@@ -38,7 +38,7 @@ export function buildFriendContext(friend: any, hangouts: any[] = [], impression
     friend.tags?.length > 0 && `Tags: ${friend.tags.join(', ')}`,
     friend.facts?.length > 0 && `Known facts:\n${friend.facts.map((f: any) => `  - ${f.category}: ${f.value}`).join('\n')}`,
     friend.notes?.length > 0 && `Recent notes:\n${friend.notes.slice(0, 6).map((n: any) => `  - [${n.date}] ${n.text}`).join('\n')}`,
-    impressions.length > 0 && `Impressions:\n${impressions.slice(0, 6).map((imp: any) => `  - [${imp.date}] ${imp.title}: ${imp.body}`).join('\n')}`,
+    impressions.filter((imp: any) => !imp.hidden_from_ai).slice(0, 6).length > 0 && `Impressions:\n${impressions.filter((imp: any) => !imp.hidden_from_ai).slice(0, 6).map((imp: any) => `  - [${imp.date}] ${imp.title}: ${imp.body}`).join('\n')}`,
     hangouts.length > 0 && `Past hangouts:\n${hangouts.slice(0, 8).map((h: any) => `  - ${h.type} in ${h.location} (${h.date})${h.highlights ? `: ${h.highlights}` : ''}`).join('\n')}`,
     friend.hangout_count > 0 && `Total hangouts logged: ${friend.hangout_count}`,
   ].filter(Boolean)

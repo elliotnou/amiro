@@ -60,7 +60,7 @@ function InlineSave({ onSave, onCancel, saving }: { onSave: () => void; onCancel
   )
 }
 
-type Section = 'header' | 'journal' | 'friends' | 'followups' | 'vibe' | null
+type Section = 'header' | 'journal' | 'friends' | 'vibe' | null
 
 export default function HangoutDetail() {
   const { id } = useParams()
@@ -82,8 +82,7 @@ export default function HangoutDetail() {
   const [editLocation, setEditLocation] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editHighlights, setEditHighlights] = useState('')
-  const [editFollowUps, setEditFollowUps] = useState('')
-  const [editFriendIds, setEditFriendIds] = useState<string[]>([])
+const [editFriendIds, setEditFriendIds] = useState<string[]>([])
   const [editGroupId, setEditGroupId] = useState<string | null>(null)
   const [editWhoSearch, setEditWhoSearch] = useState('')
   const [editRating, setEditRating] = useState(0)
@@ -102,8 +101,7 @@ export default function HangoutDetail() {
     if (!hangout) return
     if (section === 'header') { setEditType(hangout.type); setEditLocation(hangout.location); setEditDate(hangout.date) }
     if (section === 'journal') setEditHighlights(hangout.highlights ?? '')
-    if (section === 'followups') setEditFollowUps((hangout.follow_ups ?? []).join('\n'))
-    if (section === 'friends') {
+if (section === 'friends') {
       setEditGroupId(hangout.hangout_groups[0]?.group_id ?? null)
       setEditFriendIds(hangout.hangout_friends.map(hf => hf.friend_id))
       setEditWhoSearch('')
@@ -121,8 +119,6 @@ export default function HangoutDetail() {
       await updateHangout(id, { type: editType.trim() || hangout.type, location: editLocation.trim() || hangout.location, date: editDate || hangout.date })
     } else if (section === 'journal') {
       await updateHangout(id, { highlights: editHighlights.trim() || null })
-    } else if (section === 'followups') {
-      await updateHangout(id, { follow_ups: editFollowUps.split('\n').map(s => s.trim()).filter(Boolean) })
     } else if (section === 'friends') {
       const selectedGroup = groups.find(g => g.id === editGroupId)
       const friendIds = editGroupId ? (selectedGroup?.memberIds ?? []) : editFriendIds
@@ -400,39 +396,6 @@ export default function HangoutDetail() {
             </div>
           )}
 
-          {/* ── Follow-ups ── */}
-          <div className="pencil-row">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: hangout.follow_ups.length > 0 || editing === 'followups' ? 'var(--space-lg)' : 0 }}>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Follow-ups</div>
-              {editing !== 'followups' && <PencilBtn onClick={() => open('followups')} />}
-            </div>
-
-            {editing === 'followups' ? (
-              <div>
-                <textarea
-                  className="form-input"
-                  value={editFollowUps}
-                  onChange={e => setEditFollowUps(e.target.value)}
-                  placeholder="One follow-up per line…"
-                  rows={4}
-                  autoFocus
-                  style={{ width: '100%', resize: 'vertical', fontFamily: 'var(--font-sans)', fontSize: '0.88rem', boxSizing: 'border-box' }}
-                />
-                <InlineSave onSave={() => save('followups')} onCancel={cancel} saving={saving} />
-              </div>
-            ) : hangout.follow_ups.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {hangout.follow_ups.map((fu, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < hangout.follow_ups.length - 1 ? '1px solid var(--border)' : 'none', fontSize: '0.88rem', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>
-                    <span style={{ width: 16, height: 16, borderRadius: 4, border: '1.5px solid var(--border)', flexShrink: 0, display: 'inline-block' }} />
-                    {fu}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>No follow-ups.</p>
-            )}
-          </div>
 
         </div>
 

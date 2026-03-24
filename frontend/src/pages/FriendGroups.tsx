@@ -15,8 +15,6 @@ const COLORS = [
   '#7ca5b8','#9b8ec4','#4a7deb','#d4a373',
   '#e76f51','#2d6a4f','#6d597a','#264653',
 ]
-const SYMBOLS = ['✦','◆','✿','⟡','⊹','✺','⋆','◉','⬡','◎','⁂','≋','∴','⋈','⌖']
-
 // ── Small helpers ──────────────────────────────────────────────────────────
 function AvatarStack({ members, size = 30 }: { members: FriendRow[]; size?: number }) {
   const shown = members.slice(0, 5)
@@ -83,24 +81,6 @@ function GroupCard({ group, members, onClick }: {
         justifyContent: 'space-between',
       }}
     >
-      {/* Watermark symbol (only when no banner) */}
-      {!group.avatar_url && (
-        <div style={{
-          position: 'absolute',
-          right: 16,
-          bottom: 10,
-          fontSize: '5.5rem',
-          color: group.color,
-          opacity: hovered ? 0.18 : 0.1,
-          lineHeight: 1,
-          userSelect: 'none',
-          pointerEvents: 'none',
-          transition: 'opacity 200ms',
-        }}>
-          {group.symbol}
-        </div>
-      )}
-
       {/* Banner image */}
       {group.avatar_url && (
         <div style={{
@@ -113,18 +93,8 @@ function GroupCard({ group, members, onClick }: {
         </div>
       )}
 
-      {/* Top: symbol badge + name */}
+      {/* Top: name */}
       <div style={{ paddingTop: group.avatar_url ? 182 : 0 }}>
-        {!group.avatar_url && (
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 36, height: 36, borderRadius: 'var(--radius-md)',
-            background: `${group.color}18`, border: `1px solid ${group.color}30`,
-            color: group.color, fontSize: '1.1rem', marginBottom: 14,
-          }}>
-            {group.symbol}
-          </div>
-        )}
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, marginBottom: 4 }}>
           {group.name}
         </div>
@@ -145,7 +115,7 @@ function GroupCard({ group, members, onClick }: {
 interface FlowProps {
   allFriends: FriendRow[]
   initialGroup?: FriendGroupWithMembers
-  onSave: (name: string, color: string, symbol: string, friendIds: string[], avatarUrl: string | null) => Promise<void>
+  onSave: (name: string, color: string, friendIds: string[], avatarUrl: string | null) => Promise<void>
   onClose: () => void
 }
 
@@ -192,12 +162,12 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
   const [step, setStep] = useState(0)
   const [name, setName] = useState(initialGroup?.name ?? '')
   const [color, setColor] = useState(initialGroup?.color ?? COLORS[Math.floor(Math.random() * COLORS.length)])
-  const [symbol, setSymbol] = useState(initialGroup?.symbol ?? '✦')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialGroup?.memberIds ?? []))
   const [friendSearch, setFriendSearch] = useState('')
   const [saving, setSaving] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(initialGroup?.avatar_url ?? null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarRemoved, setAvatarRemoved] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const overlayMousedown = useRef(false)
 
@@ -224,11 +194,15 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
   const handleSave = async () => {
     if (!name.trim()) return
     setSaving(true)
-    let finalAvatarUrl: string | null = avatarPreview && !avatarFile ? avatarPreview : (initialGroup?.avatar_url ?? null)
-    if (avatarFile) {
+    let finalAvatarUrl: string | null = null
+    if (avatarRemoved) {
+      finalAvatarUrl = null
+    } else if (avatarFile) {
       try { finalAvatarUrl = await uploadImage(avatarFile, { maxWidth: 400, quality: 0.88 }) } catch { /* skip */ }
+    } else {
+      finalAvatarUrl = avatarPreview
     }
-    await onSave(name.trim(), color, symbol, [...selectedIds], finalAvatarUrl)
+    await onSave(name.trim(), color, [...selectedIds], finalAvatarUrl)
     setSaving(false)
   }
 
@@ -243,7 +217,7 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
   if (isEdit) {
     return (
       <>
-        <style>{`.fg-symbol-btn { transition: all 160ms ease; } .fg-symbol-btn:hover { transform: scale(1.15); } .fg-friend-row:hover { background: var(--bg-hover) !important; }`}</style>
+        <style>{`.fg-friend-row:hover { background: var(--bg-hover) !important; }`}</style>
         <div style={sharedOverlay}
           onMouseDown={e => { overlayMousedown.current = e.target === e.currentTarget }}
           onClick={e => { if (e.target === e.currentTarget && overlayMousedown.current) onClose() }}
@@ -290,7 +264,7 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
                       Change
                     </div>
                     <div
-                      onClick={e => { e.stopPropagation(); setAvatarPreview(null); setAvatarFile(null) }}
+                      onClick={e => { e.stopPropagation(); setAvatarPreview(null); setAvatarFile(null); setAvatarRemoved(true) }}
                       style={{ background: 'rgba(180,0,0,0.65)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.68rem', backdropFilter: 'blur(4px)', cursor: 'pointer' }}
                     >
                       Remove
@@ -321,21 +295,6 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
                     transform: color === c ? 'scale(1.2)' : 'scale(1)',
                     transition: 'all 180ms ease', outline: 'none',
                   }} />
-                ))}
-              </div>
-
-              {/* Symbol */}
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.67rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Symbol</p>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 22 }}>
-                {SYMBOLS.map(s => (
-                  <button key={s} className="fg-symbol-btn" onClick={() => setSymbol(s)} style={{
-                    width: 36, height: 36, borderRadius: 'var(--radius-md)',
-                    background: symbol === s ? `${color}18` : 'var(--bg)',
-                    border: `1.5px solid ${symbol === s ? color : 'var(--border)'}`,
-                    color: symbol === s ? color : 'var(--text-secondary)',
-                    fontSize: '1rem', cursor: 'pointer', outline: 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{s}</button>
                 ))}
               </div>
 
@@ -379,8 +338,6 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
       <style>{`
         @keyframes fg-fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes fg-slideUp { from { transform: translateY(28px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-        .fg-symbol-btn { transition: all 160ms ease; }
-        .fg-symbol-btn:hover { transform: scale(1.15); }
         .fg-friend-row:hover { background: var(--bg-hover) !important; }
       `}</style>
       <div
@@ -411,7 +368,7 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.2rem', padding: '2px 6px', lineHeight: 1 }}>×</button>
           </div>
 
-          {/* Step 0: Name / color / symbol */}
+          {/* Step 0: Name / color */}
           {step === 0 && (
             <div style={{ padding: '22px 24px 26px' }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 500, textAlign: 'center', marginBottom: 6 }}>Name your group</h2>
@@ -441,7 +398,7 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
                       Change
                     </div>
                     <div
-                      onClick={e => { e.stopPropagation(); setAvatarPreview(null); setAvatarFile(null) }}
+                      onClick={e => { e.stopPropagation(); setAvatarPreview(null); setAvatarFile(null); setAvatarRemoved(true) }}
                       style={{ background: 'rgba(180,0,0,0.65)', borderRadius: 'var(--radius-sm)', padding: '2px 7px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.66rem', backdropFilter: 'blur(4px)', cursor: 'pointer' }}
                     >
                       Remove
@@ -451,27 +408,12 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
                 <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
               </div>
 
-              <div style={{ padding: '18px 20px', borderRadius: 'var(--radius-lg)', background: `linear-gradient(140deg, ${color}14 0%, ${color}04 100%)`, border: `1px solid ${color}30`, marginBottom: 22, position: 'relative', overflow: 'hidden', minHeight: 90 }}>
-                <div style={{ position: 'absolute', right: 12, bottom: 4, fontSize: '3.5rem', color, opacity: 0.12, lineHeight: 1, userSelect: 'none' }}>{symbol}</div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: `${color}18`, border: `1px solid ${color}30`, color, fontSize: '0.9rem', marginBottom: 8 }}>{symbol}</div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)' }}>
-                  {name || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontWeight: 400 }}>Group name…</span>}
-                </div>
-              </div>
-
               <input autoFocus className="form-input" placeholder="e.g. The Homies, Work Crew, Book Club" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name.trim() && setStep(1)} style={{ fontSize: '1rem', marginBottom: 20, fontFamily: 'var(--font-serif)' }} />
 
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.67rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Color</p>
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 20 }}>
                 {COLORS.map(c => (
                   <button key={c} onClick={() => setColor(c)} style={{ width: 26, height: 26, borderRadius: '50%', background: c, padding: 0, cursor: 'pointer', border: color === c ? '3px solid var(--text)' : '3px solid transparent', transform: color === c ? 'scale(1.2)' : 'scale(1)', transition: 'all 180ms ease', outline: 'none' }} />
-                ))}
-              </div>
-
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.67rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Symbol</p>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 24 }}>
-                {SYMBOLS.map(s => (
-                  <button key={s} className="fg-symbol-btn" onClick={() => setSymbol(s)} style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: symbol === s ? `${color}18` : 'var(--bg)', border: `1.5px solid ${symbol === s ? color : 'var(--border)'}`, color: symbol === s ? color : 'var(--text-secondary)', fontSize: '1rem', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s}</button>
                 ))}
               </div>
 
@@ -505,7 +447,7 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setStep(0)}>← Back</button>
                 <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '13px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', background: color, color: 'white', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.94rem', opacity: saving ? 0.6 : 1, transition: 'opacity 200ms' }}>
-                  {saving ? 'Creating…' : `Create ${name.split(' ')[0]} ✦`}
+                  {saving ? 'Creating…' : `Create ${name.split(' ')[0]}`}
                 </button>
               </div>
             </div>
@@ -574,22 +516,12 @@ function GroupDetail({ group, allFriends, onClose, onDelete, onEdit }: DetailPro
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.38) 100%)' }} />
               </div>
             ) : (
-              <div style={{ background: `linear-gradient(140deg, ${group.color}20 0%, ${group.color}06 100%)`, padding: '28px 26px 0' }}>
-                <div style={{ position: 'absolute', right: 20, bottom: -10, fontSize: '6rem', color: group.color, opacity: 0.1, lineHeight: 1, userSelect: 'none' }}>{group.symbol}</div>
-              </div>
+              <div style={{ background: `linear-gradient(140deg, ${group.color}20 0%, ${group.color}06 100%)`, padding: '28px 26px 0' }} />
             )}
 
             <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 14, background: group.avatar_url ? 'rgba(0,0,0,0.35)' : 'none', border: 'none', cursor: 'pointer', color: group.avatar_url ? 'white' : 'var(--text-muted)', fontSize: '1.2rem', lineHeight: 1, padding: '3px 7px', borderRadius: 'var(--radius-full)', backdropFilter: group.avatar_url ? 'blur(4px)' : 'none' }}>×</button>
 
             <div style={{ padding: '14px 26px 20px', background: group.avatar_url ? 'var(--bg-card)' : `linear-gradient(140deg, ${group.color}20 0%, ${group.color}06 100%)` }}>
-              {!group.avatar_url && (
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 44, height: 44, borderRadius: 12,
-                  background: `${group.color}20`, border: `1.5px solid ${group.color}40`,
-                  color: group.color, fontSize: '1.3rem', marginBottom: 10,
-                }}>{group.symbol}</div>
-              )}
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.7rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.1, marginBottom: 4 }}>{group.name}</div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                 {members.length === 0 ? 'No members' : `${members.length} ${members.length === 1 ? 'person' : 'people'}`}
@@ -655,14 +587,14 @@ export default function FriendGroups() {
   const openGroup = groups.find(g => g.id === openGroupId)
   const editingGroup = groups.find(g => g.id === editingGroupId)
 
-  const handleCreate = async (name: string, color: string, symbol: string, friendIds: string[], avatarUrl: string | null) => {
-    await createGroup({ name, color, symbol, avatar_url: avatarUrl }, friendIds)
+  const handleCreate = async (name: string, color: string, friendIds: string[], avatarUrl: string | null) => {
+    await createGroup({ name, color, avatar_url: avatarUrl }, friendIds)
     setShowCreate(false)
   }
 
-  const handleEdit = async (name: string, color: string, symbol: string, friendIds: string[], avatarUrl: string | null) => {
+  const handleEdit = async (name: string, color: string, friendIds: string[], avatarUrl: string | null) => {
     if (!editingGroupId) return
-    await updateGroup(editingGroupId, { name, color, symbol, avatar_url: avatarUrl }, friendIds)
+    await updateGroup(editingGroupId, { name, color, avatar_url: avatarUrl }, friendIds)
     setEditingGroupId(null)
     setOpenGroupId(null)
   }

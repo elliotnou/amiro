@@ -27,12 +27,9 @@ export default function Onboarding() {
     }}>
       <div style={{ maxWidth: 480, width: '100%' }}>
 
-        {/* Wordmark */}
+        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-3xl)' }}>
-          <div style={{
-            fontFamily: 'var(--font-serif)', fontSize: '2.2rem', fontWeight: 600,
-            letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: 6,
-          }}>amily</div>
+          <img src="/assets/pagelogo.png" alt="amily" style={{ height: 52, objectFit: 'contain', marginBottom: 6 }} />
           <p style={{
             fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-muted)',
             letterSpacing: '0.1em', textTransform: 'uppercase',

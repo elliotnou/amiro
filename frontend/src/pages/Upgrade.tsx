@@ -40,7 +40,7 @@ export default function Upgrade() {
         </div>
         <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.6rem', fontWeight: 500, marginBottom: 8 }}>You're on amily Pro</h1>
         <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: 'var(--space-2xl)' }}>
-          All AI features are unlocked. Enjoy.
+          All AI features and unlimited photo uploads are unlocked. Enjoy.
         </p>
         <Link to="/ai" className="btn btn-ai" style={{ display: 'inline-flex' }}>Go to AI →</Link>
       </div>
@@ -57,15 +57,15 @@ export default function Upgrade() {
 
         <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', fontWeight: 500, marginBottom: 8 }}>amily Pro</h1>
         <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 'var(--space-2xl)', lineHeight: 1.6 }}>
-          AI-powered tools to help you be a better friend.
+          Unlock AI features and unlimited photo uploads.
         </p>
 
         {/* Feature list */}
         <div style={{ textAlign: 'left', marginBottom: 'var(--space-2xl)', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
-            { title: 'Gift ideas', desc: 'Personalised suggestions based on what you know about them' },
-            { title: 'Hangout ideas', desc: 'Tailored to their interests and your history together' },
-            { title: 'Ask anything', desc: 'Query your entire friend network with natural language' },
+            { title: 'AI insights & chat', desc: 'Ask anything about your friends — their interests, when you last hung out, what to get them, where to go. Powered by everything you\'ve logged.' },
+            { title: 'AI writing tools', desc: 'Generate friendship recaps, icebreakers, heartfelt messages, and more — all written in your voice, grounded in your actual history together.' },
+            { title: 'More photo uploads', desc: 'Free accounts are capped at 50 photos per friend. Pro raises that to 500.' },
           ].map(f => (
             <div key={f.title} style={{ display: 'flex', gap: 14, padding: '14px 16px', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--ai-border)' }}>
               <span style={{ color: 'var(--ai)', flexShrink: 0, marginTop: 1 }}>✦</span>

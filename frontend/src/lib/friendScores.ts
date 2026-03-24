@@ -6,22 +6,13 @@
  */
 
 interface HangoutDate { date: string }
-interface ContactInfo {
-  phone?: string | null
-  email?: string | null
-  instagram?: string | null
-  twitter?: string | null
-  linkedin?: string | null
-  snapchat?: string | null
-}
-
 export interface RadarScores {
   recency: number      // How recently you hung out
   closeness: number    // Total hangout count
   depth: number        // Notes + impressions written
   knowledge: number    // Facts recorded
   consistency: number  // How regular the hangouts are
-  contact: number      // Contact info completeness
+  longevity: number    // How long you've known them
 }
 
 /** Days between two ISO date strings */
@@ -108,13 +99,19 @@ export function scoreConsistency(hangouts: HangoutDate[]): number {
 }
 
 /**
- * Contact completeness — how many of the 6 fields are filled.
+ * Longevity — how long you've known this person (from met_date).
+ * < 3 months → 10, 3–6 mo → 25, 6–12 mo → 40,
+ * 1–2 yr → 60, 2–5 yr → 80, 5+ yr → 100.
  */
-export function scoreContact(contact: ContactInfo | null): number {
-  if (!contact) return 0
-  const fields = [contact.phone, contact.email, contact.instagram, contact.twitter, contact.linkedin, contact.snapchat]
-  const filled = fields.filter(Boolean).length
-  return Math.round((filled / fields.length) * 100)
+export function scoreLongevity(metDate: string | null): number {
+  if (!metDate) return 0
+  const days = daysBetween(metDate, new Date().toISOString().slice(0, 10))
+  if (days < 90)  return 10
+  if (days < 180) return 25
+  if (days < 365) return 40
+  if (days < 730) return 60
+  if (days < 1825) return 80
+  return 100
 }
 
 /** Convenience: compute all 6 scores at once */
@@ -124,7 +121,7 @@ export function computeRadarScores(params: {
   noteCount: number
   impressionCount: number
   factCount: number
-  contact: ContactInfo | null
+  metDate: string | null
 }): RadarScores {
   return {
     recency:     scoreRecency(params.hangouts),
@@ -132,6 +129,6 @@ export function computeRadarScores(params: {
     depth:       scoreDepth(params.noteCount, params.impressionCount),
     knowledge:   scoreKnowledge(params.factCount),
     consistency: scoreConsistency(params.hangouts),
-    contact:     scoreContact(params.contact),
+    longevity:   scoreLongevity(params.metDate),
   }
 }
