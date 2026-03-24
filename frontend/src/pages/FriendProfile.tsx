@@ -798,7 +798,6 @@ export default function FriendProfile() {
                   <InnerLabel accent={bannerColor} fontFamily={fontFamily} style={{ display: 'flex', marginBottom: 'var(--space-lg)' }}>Hangouts</InnerLabel>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {friendHangouts.map((h, i) => {
-                      const hf = h.hangout_friends.find(f => f.friend_id === id)
                       return (
                         <Link key={h.id} to={`/hangouts/${h.id}`} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '10px 0', borderBottom: i < friendHangouts.length - 1 ? `1px solid ${bannerColor}18` : 'none', textDecoration: 'none', transition: 'opacity 0.15s' }}>
                           <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: `${bannerColor}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.6rem', fontFamily: 'var(--font-sans)', fontWeight: 700, color: bannerColor, textTransform: 'uppercase', letterSpacing: '0.04em', overflow: 'hidden' }}>
