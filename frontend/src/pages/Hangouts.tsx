@@ -200,8 +200,8 @@ function HangoutsCalendar({ hangouts, bannerMap }: { hangouts: ReturnType<typeof
                       : <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', background: accent, flexShrink: 0 }} />
                     }
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.location || h.type}</div>
-                      {h.location && <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', fontWeight: 600, color: accent, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{h.type}</div>}
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.type}</div>
+                      {h.location && <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.location}</div>}
                       {h.hangout_friends.length > 0 && <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>{h.hangout_friends.map(hf => hf.friend_name.split(' ')[0]).join(', ')}</div>}
                     </div>
                     <span style={{ color: 'var(--text-muted)', fontSize: '1rem', flexShrink: 0 }}>›</span>
