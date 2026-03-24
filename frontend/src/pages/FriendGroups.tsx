@@ -67,7 +67,7 @@ function GroupCard({ group, members, onClick }: {
         background: `linear-gradient(140deg, ${group.color}14 0%, ${group.color}05 100%)`,
         border: `1px solid ${hovered ? group.color + '60' : group.color + '28'}`,
         borderRadius: 'var(--radius-xl)',
-        padding: group.avatar_url ? '0 22px 20px' : '22px 24px 20px',
+        padding: '178px 22px 20px',
         cursor: 'pointer',
         overflow: 'hidden',
         transition: 'transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease',
@@ -75,7 +75,7 @@ function GroupCard({ group, members, onClick }: {
         boxShadow: hovered
           ? `0 12px 40px ${group.color}22, 0 2px 8px rgba(0,0,0,0.06)`
           : '0 2px 8px rgba(0,0,0,0.04)',
-        minHeight: group.avatar_url ? 260 : 180,
+        minHeight: 260,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -93,8 +93,8 @@ function GroupCard({ group, members, onClick }: {
         </div>
       )}
 
-      {/* Top: name */}
-      <div style={{ paddingTop: group.avatar_url ? 182 : 0 }}>
+      {/* Text — always at bottom */}
+      <div>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, marginBottom: 4 }}>
           {group.name}
         </div>

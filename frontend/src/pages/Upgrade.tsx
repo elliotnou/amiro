@@ -66,6 +66,7 @@ export default function Upgrade() {
             { title: 'AI insights & chat', desc: 'Ask anything about your friends — their interests, when you last hung out, what to get them, where to go. Powered by everything you\'ve logged.' },
             { title: 'AI writing tools', desc: 'Generate friendship recaps, icebreakers, heartfelt messages, and more — all written in your voice, grounded in your actual history together.' },
             { title: 'More photo uploads', desc: 'Free accounts are capped at 50 photos per friend. Pro raises that to 500.' },
+            { title: 'Profile customization', desc: 'Unlock stickers, themes, and exclusive profile decorations to make every friendship feel distinct.' },
           ].map(f => (
             <div key={f.title} style={{ display: 'flex', gap: 14, padding: '14px 16px', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--ai-border)' }}>
               <span style={{ color: 'var(--ai)', flexShrink: 0, marginTop: 1 }}>✦</span>

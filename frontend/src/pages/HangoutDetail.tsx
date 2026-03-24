@@ -69,7 +69,8 @@ export default function HangoutDetail() {
   const { deleteHangout, updateHangout } = useHangouts()
   const { friends } = useFriends()
   const { groups } = useFriendGroups()
-  const { images } = useGallery(undefined, id)
+  const { images, uploading: photoUploading, uploadPhoto, deleteImage } = useGallery(undefined, id)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -134,6 +135,15 @@ if (section === 'friends') {
   const toggleFriend = (fid: string) =>
     setEditFriendIds(prev => prev.includes(fid) ? prev.filter(x => x !== fid) : [...prev, fid])
 
+  const toggleEditGroup = (id: string) => {
+    const isDeselecting = editGroupId === id
+    setEditGroupId(isDeselecting ? null : id)
+    if (isDeselecting) {
+      const memberIds = new Set(groups.find(g => g.id === id)?.memberIds ?? [])
+      setEditFriendIds(prev => prev.filter(f => !memberIds.has(f)))
+    }
+  }
+
   const handleDelete = async () => {
     if (!id) return
     setDeleting(true)
@@ -164,7 +174,7 @@ if (section === 'friends') {
           {images.length > 1 && (
             <button onClick={() => setLightboxIdx(0)} style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 2, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 'var(--radius-full)', padding: '5px 12px', color: 'white', fontFamily: 'var(--font-sans)', fontSize: '0.68rem', fontWeight: 500, cursor: 'pointer' }}>{images.length} photos</button>
           )}
-          <div style={{ position: 'absolute', bottom: 16, left: 16, zIndex: 2, fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{hangout.location || hangout.type}</div>
+          <div style={{ position: 'absolute', bottom: 16, left: 16, zIndex: 2, fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{hangout.type}</div>
         </div>
 
         <div className="animate-in">
@@ -183,9 +193,9 @@ if (section === 'friends') {
                 </div>
               ) : (
                 <>
-                  <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 500, lineHeight: 1.15, marginBottom: 6, color: 'var(--text-primary)' }}>{hangout.location || hangout.type}</h1>
+                  <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 500, lineHeight: 1.15, marginBottom: 6, color: 'var(--text-primary)' }}>{hangout.type}</h1>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    {hangout.location && <><span>{hangout.type}</span><span style={{ opacity: 0.4 }}>·</span></>}
+                    {hangout.location && <><span>{hangout.location}</span><span style={{ opacity: 0.4 }}>·</span></>}
                     <span>{hangout.date}</span>
                   </div>
                 </>
@@ -292,10 +302,13 @@ if (section === 'friends') {
                 <div style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', overflow: 'hidden', maxHeight: 260, overflowY: 'auto', overscrollBehavior: 'contain', marginBottom: 10 }}>
                   {groups.filter(g => g.name.toLowerCase().includes(editWhoSearch.toLowerCase())).map(g => {
                     const selected = editGroupId === g.id
+                    const disabled = !!editGroupId && !selected
                     const memberNames = g.memberIds.map(id => friends.find(f => f.id === id)?.name.split(' ')[0]).filter(Boolean)
                     return (
-                      <div key={g.id} onClick={() => setEditGroupId(prev => prev === g.id ? null : g.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: selected ? `${g.color}0c` : 'transparent', transition: 'background 120ms' }}>
-                        <div style={{ width: 34, height: 34, borderRadius: 8, background: `${g.color}18`, border: `1px solid ${g.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: g.color, fontSize: '1rem' }}>{g.symbol}</div>
+                      <div key={g.id} onClick={() => !disabled && toggleEditGroup(g.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', cursor: disabled ? 'default' : 'pointer', borderBottom: '1px solid var(--border)', background: selected ? `${g.color}0c` : 'transparent', opacity: disabled ? 0.35 : 1, transition: 'background 120ms, opacity 120ms' }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 8, background: `${g.color}18`, border: `1px solid ${g.color}30`, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: g.color, fontFamily: 'var(--font-serif)', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {g.avatar_url ? <img src={g.avatar_url} alt={g.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : g.name.slice(0, 2).toUpperCase()}
+                        </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.92rem', fontWeight: 500, color: 'var(--text)' }}>{g.name}</div>
                           {memberNames.length > 0 && <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memberNames.join(', ')}</div>}
@@ -306,10 +319,13 @@ if (section === 'friends') {
                       </div>
                     )
                   })}
-                  {!editGroupId && friends.filter(f => f.name.toLowerCase().includes(editWhoSearch.toLowerCase())).map(f => {
-                    const selected = editFriendIds.includes(f.id)
+                  {friends.filter(f => f.name.toLowerCase().includes(editWhoSearch.toLowerCase())).map(f => {
+                    const selectedGroup = groups.find(g => g.id === editGroupId)
+                    const inGroup = !!selectedGroup?.memberIds.includes(f.id)
+                    const selected = editFriendIds.includes(f.id) && !inGroup
+                    const disabled = !!editGroupId
                     return (
-                      <div key={f.id} onClick={() => toggleFriend(f.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: selected ? 'var(--accent-bg)' : 'transparent', transition: 'background 120ms' }}>
+                      <div key={f.id} onClick={() => !disabled && toggleFriend(f.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', cursor: disabled ? 'default' : 'pointer', borderBottom: '1px solid var(--border)', background: selected ? 'var(--accent-bg)' : 'transparent', opacity: disabled ? 0.35 : 1, transition: 'background 120ms, opacity 120ms' }}>
                         <div style={{ width: 34, height: 34, borderRadius: '50%', background: f.avatar_color, overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {f.avatar_url ? <img src={f.avatar_url} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '0.65rem', color: 'white', fontFamily: 'var(--font-serif)', fontWeight: 500 }}>{f.initials}</span>}
                         </div>
@@ -339,7 +355,6 @@ if (section === 'friends') {
                       <div style={{ position: 'absolute', inset: '-8px -12px', background: `${hg.group_color}0d`, border: `1px solid ${hg.group_color}28`, borderRadius: 'var(--radius-lg)', pointerEvents: 'none' }} />
                       <div style={{ position: 'relative' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px 3px 7px', borderRadius: 'var(--radius-full)', background: `${hg.group_color}1a`, border: `1.5px solid ${hg.group_color}50`, marginBottom: 12 }}>
-                          <span style={{ fontSize: '0.95rem' }}>{hg.group_symbol}</span>
                           <span style={{ fontFamily: 'var(--font-serif)', fontSize: '0.82rem', fontWeight: 600, color: hg.group_color, letterSpacing: '0.01em' }}>{hg.group_name}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -383,18 +398,43 @@ if (section === 'friends') {
           </div>
 
           {/* ── Photos ── */}
-          {images.length > 1 && (
-            <div style={{ marginBottom: 'var(--space-2xl)' }}>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 'var(--space-lg)' }}>Photos · {images.length}</div>
+          <div style={{ marginBottom: 'var(--space-2xl)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-lg)' }}>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                Photos{images.length > 0 ? ` · ${images.length}` : ''}
+              </div>
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={photoUploading || images.length >= 10}
+                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '4px 12px', fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', cursor: (photoUploading || images.length >= 10) ? 'default' : 'pointer', opacity: images.length >= 10 ? 0.4 : 1 }}
+              >
+                {photoUploading ? 'Uploading…' : images.length >= 10 ? '10/10' : '+ Add photos'}
+              </button>
+              <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={async e => {
+                const files = e.target.files
+                if (!files) return
+                const slots = 10 - images.length
+                if (slots <= 0) return
+                await Promise.all(Array.from(files).slice(0, slots).map(f => uploadPhoto(f, { hangoutId: id })))
+                e.target.value = ''
+              }} />
+            </div>
+            {images.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
                 {images.map((img, i) => (
-                  <div key={img.id} style={{ aspectRatio: '1', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setLightboxIdx(i)}>
+                  <div key={img.id} style={{ aspectRatio: '1', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
+                    onClick={() => setLightboxIdx(i)}
+                  >
                     <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button
+                      onClick={e => { e.stopPropagation(); deleteImage(img.id) }}
+                      style={{ position: 'absolute', top: 5, right: 5, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                    >✕</button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
 
         </div>

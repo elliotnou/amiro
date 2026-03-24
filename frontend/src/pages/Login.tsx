@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { LogoIcon } from '../components/Icons'
 
 export default function Login() {
   const { signIn, signUp } = useAuth()
@@ -148,14 +147,8 @@ export default function Login() {
 
 function Logo() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-      <div style={{
-        width: 34, height: 34, borderRadius: 10,
-        background: 'var(--text)', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', color: 'white',
-      }}>
-        <LogoIcon size={20} />
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 28 }}>
+      <img src="/assets/pagelogo.png" alt="amily" style={{ width: 34, height: 34, objectFit: 'contain' }} />
       <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 500 }}>
         amily
       </span>

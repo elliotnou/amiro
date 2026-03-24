@@ -11,7 +11,7 @@ export interface HangoutGroupTag {
   group_id: string
   group_name: string
   group_color: string
-  group_symbol: string
+  group_avatar_url: string | null
 }
 
 export interface HangoutWithFriends extends HangoutRow {
@@ -50,7 +50,7 @@ export function useHangouts() {
     try {
       const { data: hgData } = await supabase
         .from('hangout_groups')
-        .select('id, hangout_id, group_id, friend_groups ( name, color, symbol )')
+        .select('id, hangout_id, group_id, friend_groups ( name, color, avatar_url )')
       for (const hg of (hgData ?? []) as any[]) {
         if (!groupsMap[hg.hangout_id]) groupsMap[hg.hangout_id] = []
         groupsMap[hg.hangout_id].push({
@@ -58,7 +58,7 @@ export function useHangouts() {
           group_id: hg.group_id,
           group_name: hg.friend_groups?.name ?? '',
           group_color: hg.friend_groups?.color ?? '#457b9d',
-          group_symbol: hg.friend_groups?.symbol ?? '✦',
+          group_avatar_url: hg.friend_groups?.avatar_url ?? null,
         })
       }
     } catch { /* table not yet migrated — skip */ }
@@ -152,14 +152,14 @@ export function useHangout(id: string | undefined) {
       try {
         const { data: hgData } = await supabase
           .from('hangout_groups')
-          .select('id, group_id, friend_groups (name, color, symbol)')
+          .select('id, group_id, friend_groups (name, color, avatar_url)')
           .eq('hangout_id', id)
         hangoutGroups = ((hgData ?? []) as any[]).map((hg: any) => ({
           id: hg.id,
           group_id: hg.group_id,
           group_name: hg.friend_groups?.name ?? '',
           group_color: hg.friend_groups?.color ?? '#457b9d',
-          group_symbol: hg.friend_groups?.symbol ?? '✦',
+          group_avatar_url: hg.friend_groups?.avatar_url ?? null,
         }))
       } catch { /* skip */ }
 

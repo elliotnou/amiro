@@ -45,7 +45,9 @@ export default function Modal({ open, onClose, title, children, style }: ModalPr
     >
       <div className="modal" style={style}>
         <h2 className="modal-title">{title}</h2>
-        {children}
+        <div className="modal-body">
+          {children}
+        </div>
       </div>
     </div>
   )

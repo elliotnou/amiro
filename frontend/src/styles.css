@@ -796,12 +796,12 @@ img { display: block; max-width: 100%; }
 .modal {
   background: var(--bg-card);
   border-radius: var(--radius-xl);
-  padding: var(--space-xl);
   width: 90%;
   max-width: 560px;
   max-height: 85vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   animation: slideUp 200ms ease;
   box-shadow: var(--shadow-lg);
 }
@@ -810,7 +810,19 @@ img { display: block; max-width: 100%; }
   font-family: var(--font-serif);
   font-size: 1.3rem;
   font-weight: 500;
+  flex-shrink: 0;
+  padding: var(--space-xl) var(--space-xl) 0;
   margin-bottom: var(--space-lg);
+}
+
+.modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-xl) var(--space-xl);
+  scrollbar-width: none;
+}
+.modal-body::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-actions {
