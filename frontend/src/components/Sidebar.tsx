@@ -43,7 +43,7 @@ function IconChevron({ collapsed }: { collapsed: boolean }) {
 
 export default function Sidebar() {
   const { collapsed, toggle } = useSidebar()
-  const { theme, toggle: toggleTheme, isDark } = useTheme()
+  const { toggle: toggleTheme, isDark } = useTheme()
   const { status: subStatus } = useSubscription()
 
   return (
