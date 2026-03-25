@@ -51,9 +51,10 @@ function MonthBars({ counts, labels }: { counts: number[]; labels: string[] }) {
       {counts.map((c, i) => (
         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <div style={{
-            width: '100%', borderRadius: '3px 3px 0 0',
-            background: i === counts.length - 1 ? 'var(--accent)' : `${i % 2 === 0 ? '#e07a5f' : '#c9a96e'}60`,
-            height: `${Math.max((c / max) * 64, c > 0 ? 6 : 0)}px`,
+            width: '70%', maxWidth: 16, borderRadius: 100,
+            background: i === counts.length - 1 ? 'var(--accent)' : '#e07a5f',
+            opacity: i === counts.length - 1 ? 1 : c > 0 ? 0.2 + (c / max) * 0.4 : 0.08,
+            height: `${Math.max((c / max) * 64, c > 0 ? 10 : 4)}px`,
             transition: 'height 0.4s ease',
           }} />
           <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' }}>{labels[i]}</span>
@@ -73,9 +74,10 @@ function DowChart({ counts }: { counts: number[] }) {
       {counts.map((c, i) => (
         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <div style={{
-            width: '100%', borderRadius: 4,
-            background: c === max ? 'var(--accent)' : 'var(--bg-hover)',
-            height: `${Math.max((c / max) * 40, c > 0 ? 4 : 2)}px`,
+            width: '60%', maxWidth: 14, borderRadius: 100,
+            background: '#4a9e6e',
+            opacity: c === max ? 1 : c > 0 ? 0.2 + (c / max) * 0.4 : 0.08,
+            height: `${Math.max((c / max) * 40, c > 0 ? 6 : 3)}px`,
           }} />
           <span style={{ fontSize: '0.6rem', fontFamily: 'var(--font-sans)', color: c === max ? 'var(--accent)' : 'var(--text-muted)' }}>{DOW_LABELS[i]}</span>
         </div>
@@ -191,13 +193,20 @@ export default function Stats() {
     </div>
   )
 
-  // ── Card shell ───────────────────────────────────────────────────────
-  const Card = ({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) => (
+  // ── Card shell (double-rectangle frame) ─────────────────────────────
+  const Card = ({ children, style = {}, innerBg }: { children: React.ReactNode; style?: React.CSSProperties; innerBg?: string }) => (
     <div style={{
-      background: 'var(--bg-card)', borderRadius: 'var(--radius-xl)',
-      border: '1px solid var(--border)', padding: 'var(--space-xl)',
-      boxShadow: 'var(--shadow-sm)', ...style
-    }}>{children}</div>
+      background: '#ffffff', borderRadius: 22, padding: 8,
+      border: '1px solid rgba(0,0,0,0.06)', ...style
+    }}>
+      <div style={{
+        background: innerBg || 'linear-gradient(to bottom right, #ffffff 0%, #fefcfb 50%, #faf8f6 100%)',
+        borderRadius: 16, padding: '20px 22px',
+        border: '1px solid rgba(0,0,0,0.06)', height: '100%',
+      }}>
+        {children}
+      </div>
+    </div>
   )
   const CardLabel = ({ children }: { children: React.ReactNode }) => (
     <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 'var(--space-md)' }}>{children}</div>
@@ -213,21 +222,25 @@ export default function Stats() {
       {/* ── Row 1: KPI strip ── */}
       <div className="animate-in animate-in-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
         {[
-          { label: 'Friends', value: totalFriends, color: '#e07a5f' },
-          { label: 'Hangouts', value: totalHangouts, color: '#457b9d' },
-          { label: 'Avg / month', value: avgPerMonth, color: '#4a9e6e' },
-          { label: 'Places visited', value: uniqueLocations, color: '#c9a96e' },
-          { label: 'Words journalled', value: wordsJournalled.toLocaleString(), color: '#9b8ec4' },
+          { label: 'Friends', value: totalFriends, color: '#e07a5f', gradient: 'linear-gradient(to bottom right, #ffffff 0%, #fffaf9 50%, #fef6f4 100%)' },
+          { label: 'Hangouts', value: totalHangouts, color: '#457b9d', gradient: 'linear-gradient(to bottom right, #ffffff 0%, #f9fbfc 50%, #f4f7fa 100%)' },
+          { label: 'Avg / month', value: avgPerMonth, color: '#4a9e6e', gradient: 'linear-gradient(to bottom right, #ffffff 0%, #f9fcfa 50%, #f4f9f6 100%)' },
+          { label: 'Places visited', value: uniqueLocations, color: '#c9a96e', gradient: 'linear-gradient(to bottom right, #ffffff 0%, #fdfbf8 50%, #faf8f3 100%)' },
+          { label: 'Words journalled', value: wordsJournalled.toLocaleString(), color: '#9b8ec4', gradient: 'linear-gradient(to bottom right, #ffffff 0%, #fbfafd 50%, #f7f5fb 100%)' },
         ].map(s => (
           <div key={s.label} style={{
-            background: 'var(--bg-card)', borderRadius: 'var(--radius-xl)',
-            border: '1px solid var(--border)', padding: '16px 18px',
-            boxShadow: 'var(--shadow-sm)',
+            background: '#ffffff', borderRadius: 22, padding: 7,
+            border: '1px solid rgba(0,0,0,0.06)',
           }}>
-            <div style={{ display: 'inline-block', background: `${s.color}14`, borderRadius: 'var(--radius-md)', padding: '2px 8px', marginBottom: 8 }}>
-              <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.7rem', fontWeight: 600, color: s.color, lineHeight: 1.2 }}>{s.value}</span>
+            <div style={{
+              background: s.gradient, borderRadius: 16, padding: '14px 16px',
+              border: '1px solid rgba(0,0,0,0.06)',
+            }}>
+              <div style={{ marginBottom: 6 }}>
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.7rem', fontWeight: 600, color: s.color, lineHeight: 1.2 }}>{s.value}</span>
+              </div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
             </div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -236,7 +249,7 @@ export default function Stats() {
       <div className="animate-in animate-in-2" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 16 }}>
 
         {/* Tier donut */}
-        <Card>
+        <Card innerBg="linear-gradient(to bottom right, #ffffff 0%, #fffaf9 50%, #fef6f4 100%)">
           <CardLabel>Friend tiers</CardLabel>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -261,7 +274,7 @@ export default function Stats() {
         </Card>
 
         {/* Monthly activity */}
-        <Card>
+        <Card innerBg="linear-gradient(to bottom right, #ffffff 0%, #f9fbfc 50%, #f4f7fa 100%)">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-md)' }}>
             <CardLabel>Monthly activity</CardLabel>
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>Last 12 months</span>
@@ -274,7 +287,7 @@ export default function Stats() {
       <div className="animate-in animate-in-3" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 16 }}>
 
         {/* Hangouts by friend */}
-        <Card>
+        <Card innerBg="linear-gradient(to bottom right, #ffffff 0%, #fbfafd 50%, #f7f5fb 100%)">
           <CardLabel>Hangouts by friend</CardLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {hangoutCounts.slice(0, 8).map(f => (
@@ -292,14 +305,14 @@ export default function Stats() {
 
         {/* Day of week + streak */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Card style={{ flex: 1 }}>
+          <Card style={{ flex: 1 }} innerBg="linear-gradient(to bottom right, #ffffff 0%, #f9fcfa 50%, #f4f9f6 100%)">
             <CardLabel>Peak day</CardLabel>
             <DowChart counts={dowCounts} />
             <div style={{ marginTop: 8, fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
               You hang out most on <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{peakDay}</span>s
             </div>
           </Card>
-          <Card>
+          <Card innerBg="linear-gradient(to bottom right, #ffffff 0%, #f9fcfa 50%, #f4f9f6 100%)">
             <CardLabel>Weekly streak</CardLabel>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', fontWeight: 600, color: '#4a9e6e', lineHeight: 1 }}>{longestStreak}<span style={{ fontSize: '0.9rem', fontWeight: 400, marginLeft: 4, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>wks</span></div>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 4 }}>longest consecutive streak</div>
@@ -311,7 +324,7 @@ export default function Stats() {
       <div className="animate-in animate-in-4" style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 12, marginBottom: 16 }}>
 
         {/* Rating distribution */}
-        <Card>
+        <Card innerBg="linear-gradient(to bottom right, #ffffff 0%, #fdfbf8 50%, #faf8f3 100%)">
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 'var(--space-lg)' }}>
             <CardLabel>Hangout ratings</CardLabel>
             {avgRating !== null && (
@@ -330,7 +343,7 @@ export default function Stats() {
                 return (
                   <div key={rating} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                     {count > 0 && <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.52rem', color: 'var(--text-muted)' }}>{count}</span>}
-                    <div style={{ width: '100%', borderRadius: '3px 3px 0 0', background: count > 0 ? color : 'var(--bg-hover)', height: `${Math.max(pct * 48, count > 0 ? 6 : 2)}px`, transition: 'height 0.4s ease' }} />
+                    <div style={{ width: '70%', maxWidth: 16, borderRadius: 100, background: count > 0 ? color : '#ccc', opacity: count > 0 ? 0.3 + pct * 0.7 : 0.08, height: `${Math.max(pct * 48, count > 0 ? 8 : 3)}px`, transition: 'height 0.4s ease' }} />
                     <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.58rem', color: count > 0 ? color : 'var(--text-muted)', fontWeight: count > 0 ? 600 : 400 }}>{rating}</span>
                   </div>
                 )
@@ -340,7 +353,7 @@ export default function Stats() {
         </Card>
 
         {/* Top 3 friends */}
-        <Card>
+        <Card innerBg="linear-gradient(to bottom right, #ffffff 0%, #fffaf9 50%, #fef6f4 100%)">
           <CardLabel>Most seen</CardLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {hangoutCounts.slice(0, 3).map((f, i) => {
@@ -365,7 +378,7 @@ export default function Stats() {
 
       {/* ── Row 5: Day counters grid ── */}
       <div className="animate-in" style={{ marginBottom: 16 }}>
-        <Card>
+        <Card innerBg="linear-gradient(to bottom right, #ffffff 0%, #fefcfb 50%, #faf8f6 100%)">
           <CardLabel>Friendship timelines</CardLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
             {[...friends].sort((a, b) => b.day_count - a.day_count).map(f => {
