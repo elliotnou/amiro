@@ -107,26 +107,50 @@ export default function Friends() {
             <h1 className="page-title">Friends</h1>
             <p className="page-subtitle">{friends.length} {friends.length === 1 ? 'person' : 'people'} in your graph</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowFlow(true)}>
-            <IconUserPlus size={16} />
-            Add friend
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {([
+              { v: 'grid' as ViewMode, Icon: IconGrid, label: 'Grid' },
+              { v: 'timeline' as ViewMode, Icon: IconTimeline, label: 'Timeline' },
+              { v: 'graph' as ViewMode, Icon: IconNetwork, label: 'Graph' },
+            ] as const).map(({ v, Icon, label }) => (
+              <button
+                key={v}
+                title={label}
+                onClick={() => { setView(v); localStorage.setItem('friends_view', v) }}
+                className="btn"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 36, height: 36, padding: 0,
+                  borderRadius: 'var(--radius-md)', border: '1px solid var(--border)',
+                  background: view === v ? 'var(--accent)' : 'var(--bg-card)',
+                  color: view === v ? 'white' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'background 150ms, color 150ms',
+                }}
+              >
+                <Icon size={15} />
+              </button>
+            ))}
+            <button className="btn btn-primary" onClick={() => setShowFlow(true)} style={{ marginLeft: 4 }}>
+              <IconUserPlus size={16} />
+              Add friend
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="search-bar animate-in animate-in-1">
-        <span className="search-icon"><IconSearch size={16} /></span>
-        <input
-          type="text"
-          placeholder="Search by name, location, tag, or interest..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="animate-in animate-in-1" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 'var(--space-lg)' }}>
-        {view === 'grid' && (
-          <>
+      {view === 'grid' && (
+        <div className="animate-in animate-in-1">
+          <div className="search-bar">
+            <span className="search-icon"><IconSearch size={16} /></span>
+            <input
+              type="text"
+              placeholder="Search by name, location, tag, or interest..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, marginBottom: 'var(--space-lg)' }}>
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Sort by:</span>
             <select
               value={sort}
@@ -138,33 +162,9 @@ export default function Friends() {
                 <option key={opt.key} value={opt.key}>{opt.label}</option>
               ))}
             </select>
-          </>
-        )}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-          {([
-            { v: 'grid' as ViewMode, Icon: IconGrid, label: 'Grid' },
-            { v: 'timeline' as ViewMode, Icon: IconTimeline, label: 'Timeline' },
-            { v: 'graph' as ViewMode, Icon: IconNetwork, label: 'Graph' },
-          ] as const).map(({ v, Icon, label }) => (
-            <button
-              key={v}
-              title={label}
-              onClick={() => { setView(v); localStorage.setItem('friends_view', v) }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)',
-                background: view === v ? 'var(--accent)' : 'var(--bg-card)',
-                color: view === v ? 'white' : 'var(--text-muted)',
-                cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '0.72rem',
-                transition: 'background 150ms, color 150ms',
-              }}
-            >
-              <Icon size={13} />
-              {label}
-            </button>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40vh' }}>

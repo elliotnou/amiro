@@ -65,6 +65,12 @@ export default function FriendsGraph({
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
 
+  // Adaptive scale based on friend count
+  const n = friends.length
+  const scale = n <= 5 ? 1.5 : n <= 10 ? 1.25 : n <= 20 ? 1.0 : n <= 35 ? 0.85 : 0.7
+  const minR = Math.round(20 * scale)
+  const maxR = Math.round(34 * scale)
+
   const friendMap = useMemo(() => {
     const m: Record<string, GF> = {}
     for (const f of friends) m[f.id] = f
@@ -162,7 +168,7 @@ export default function FriendsGraph({
     // Initialize positions by tier ring
     nodesRef.current = friends.map((f, i) => {
       const angle = (i / friends.length) * Math.PI * 2 + Math.random() * 0.4
-      const tierR = f.tier === 'inner-circle' ? 90 : f.tier === 'close-friend' ? 170 : 250
+      const tierR = (f.tier === 'inner-circle' ? 90 : f.tier === 'close-friend' ? 170 : 250) * scale
       const jitter = (Math.random() - 0.5) * 50
       return {
         id: f.id,
@@ -170,7 +176,7 @@ export default function FriendsGraph({
         y: H / 2 + Math.sin(angle) * (tierR + jitter),
         vx: 0,
         vy: 0,
-        r: Math.max(20, Math.min(34, 20 + Math.sqrt(f.hangout_count || 0) * 2.5)),
+        r: Math.max(minR, Math.min(maxR, minR + Math.sqrt(f.hangout_count || 0) * 2.5 * scale)),
       }
     })
 
@@ -183,27 +189,28 @@ export default function FriendsGraph({
       const nodeMap: Record<string, SimNode> = {}
       for (const n of nodes) nodeMap[n.id] = n
 
-      // Node–node repulsion
+      // Node–node repulsion (scaled)
+      const repulsion = 1400 * scale * scale
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const a = nodes[i], b = nodes[j]
           const dx = b.x - a.x, dy = b.y - a.y
           const d2 = dx * dx + dy * dy + 1
           const d = Math.sqrt(d2)
-          const force = alpha * 1400 / d2
+          const force = alpha * repulsion / d2
           const nx = dx / d, ny = dy / d
           a.vx -= nx * force; a.vy -= ny * force
           b.vx += nx * force; b.vy += ny * force
         }
       }
 
-      // Group edge spring attraction
+      // Group edge spring attraction (scaled rest length)
       for (const e of groupEdgesCopy) {
         const a = nodeMap[e.source], b = nodeMap[e.target]
         if (!a || !b) continue
         const dx = b.x - a.x, dy = b.y - a.y
         const d = Math.sqrt(dx * dx + dy * dy) || 1
-        const restLen = a.r + b.r + 70
+        const restLen = a.r + b.r + 70 * scale
         const stretch = d - restLen
         const k = 0.04 * alpha
         const fx = (dx / d) * stretch * k, fy = (dy / d) * stretch * k
@@ -327,8 +334,12 @@ export default function FriendsGraph({
     )
   }
 
+  // Custom cursor — salmon pointer arrow
+  const cursorSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='30' viewBox='0 0 24 30'><path d='M3 1 C2.5 0.5 2 0.8 2 1.5 L6 23 C6.2 24 7.2 24.5 7.8 23.8 L11 19.5 C11.5 18.8 12 18.5 12.8 18.5 L18.5 17.5 C19.5 17.3 19.8 16.2 19 15.6 Z' fill='#e07a5f' stroke='white' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg>`
+  const cursorUrl = `url("data:image/svg+xml,${encodeURIComponent(cursorSvg)}") 3 1, auto`
+
   return (
-    <div style={{ position: 'relative', userSelect: 'none', opacity: settled ? 1 : 0, transition: 'opacity 400ms ease' }}>
+    <div style={{ position: 'relative', userSelect: 'none', opacity: settled ? 1 : 0, transition: 'opacity 400ms ease', borderRadius: 20, overflow: 'hidden' }}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
@@ -336,15 +347,16 @@ export default function FriendsGraph({
           width: '100%',
           height: 'auto',
           display: 'block',
-          borderRadius: 16,
+          borderRadius: 20,
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
+          cursor: cursorUrl,
         }}
       >
         <defs>
           {friends.map(f => (
             <clipPath key={`clip-${f.id}`} id={`clip-${f.id}`}>
-              <circle r={Math.max(20, Math.min(34, 20 + Math.sqrt(f.hangout_count || 0) * 2.5))} />
+              <circle r={Math.max(minR, Math.min(maxR, minR + Math.sqrt(f.hangout_count || 0) * 2.5 * scale))} />
             </clipPath>
           ))}
         </defs>
@@ -400,7 +412,7 @@ export default function FriendsGraph({
         {/* Nodes */}
         <g>
           {friends.map(f => {
-            const r = Math.max(20, Math.min(34, 20 + Math.sqrt(f.hangout_count || 0) * 2.5))
+            const r = Math.max(minR, Math.min(maxR, minR + Math.sqrt(f.hangout_count || 0) * 2.5 * scale))
             const tc = TIER_COLOR[f.tier ?? ''] ?? 'var(--border)'
             const node = nodesRef.current.find(n => n.id === f.id)
             const x = node?.x ?? W / 2
@@ -410,7 +422,7 @@ export default function FriendsGraph({
                 key={f.id}
                 ref={el => { nodeEls.current[f.id] = el }}
                 transform={`translate(${x.toFixed(1)},${y.toFixed(1)})`}
-                style={{ cursor: 'grab' }}
+                style={{ cursor: cursorUrl }}
                 onMouseDown={ev => handleMouseDown(f.id, ev)}
                 onMouseEnter={ev => {
                   setHoveredId(f.id)
@@ -430,8 +442,8 @@ export default function FriendsGraph({
                 {f.avatar_url ? (
                   <image
                     href={f.avatar_url}
-                    x={-r} y={-r}
-                    width={r * 2} height={r * 2}
+                    x={-r - 1} y={-r - 1}
+                    width={r * 2 + 2} height={r * 2 + 2}
                     clipPath={`url(#clip-${f.id})`}
                     preserveAspectRatio="xMidYMid slice"
                   />
@@ -466,36 +478,33 @@ export default function FriendsGraph({
             )
           })}
         </g>
+
       </svg>
 
-      {/* Hover tooltip — clamped inside the graph container */}
+      {/* Hover name pill */}
       {hoveredId && friendMap[hoveredId] && svgRef.current && (() => {
         const rect = svgRef.current!.getBoundingClientRect()
-        const relX = Math.min(tooltipPos.x - rect.left + 14, rect.width - 160)
-        const relY = Math.max(tooltipPos.y - rect.top - 50, 8)
+        const relX = tooltipPos.x - rect.left + 16
+        const relY = tooltipPos.y - rect.top + 16
+        const tc = TIER_COLOR[friendMap[hoveredId].tier ?? ''] ?? 'var(--accent)'
         return (
           <div
             style={{
               position: 'absolute',
-              left: Math.max(8, relX),
-              top: relY,
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: 10,
-              padding: '8px 12px',
+              left: Math.min(Math.max(8, relX), rect.width - 120),
+              top: Math.min(Math.max(8, relY), rect.height - 36),
+              background: tc,
+              borderRadius: 20,
+              padding: '5px 14px',
               pointerEvents: 'none',
               zIndex: 200,
-              boxShadow: 'var(--shadow-md)',
+              boxShadow: `0 4px 14px ${tc}50`,
               whiteSpace: 'nowrap',
             }}
           >
-            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)', marginBottom: 2 }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.78rem', color: 'white' }}>
               {friendMap[hoveredId].name}
-            </div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              {friendMap[hoveredId].tier?.replace(/-/g, ' ')}
-              {friendMap[hoveredId].hangout_count > 0 && ` · ${friendMap[hoveredId].hangout_count} hang${friendMap[hoveredId].hangout_count !== 1 ? 's' : ''}`}
-            </div>
+            </span>
           </div>
         )
       })()}
@@ -505,9 +514,9 @@ export default function FriendsGraph({
         position: 'absolute', top: 14, left: 14,
         display: 'flex', flexDirection: 'column', gap: 6,
         fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)',
-        background: 'var(--bg-card)', border: '1px solid var(--border)',
+        background: 'transparent',
         borderRadius: 10, padding: '10px 14px',
-        pointerEvents: 'none', opacity: 0.85,
+        pointerEvents: 'none', opacity: 0.8,
       }}>
         {Object.entries(TIER_COLOR).map(([tier, color]) => (
           <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
