@@ -11,7 +11,7 @@ import Modal from '../components/Modal'
 import RelationshipRadar from '../components/RelationshipRadar'
 import { computeRadarScores } from '../lib/friendScores'
 import { uploadImage } from '../lib/cloudinary'
-import { IconArrowLeft, IconPhone, IconMail, IconLink, IconPaintbrush } from '../components/Icons'
+import { IconArrowLeft, IconPhone, IconMail, IconLink, IconPaintbrush, IconStar } from '../components/Icons'
 import { tierLabel, tierColor } from '../data/mock'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
@@ -101,16 +101,20 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 function ChatMessage({ text }: { text: string }) {
-  // Normalise inline numbered lists ("...text. 2. Next...") into line breaks
+  // Only treat "N. " as a list item if it follows a newline or is at the very start,
+  // AND is followed by a capital letter or meaningful word (i.e. it's actually a list).
   const normalised = text
-    .replace(/\s+(\d+)\.\s+/g, '\n$1. ')
+    .replace(/(?<=\n|^)(\d+)\.\s+(?=[A-Z])/gm, '$1. ')
+    .replace(/\n(\d+)\.\s+(?=[A-Z])/g, '\n$1. ')
+    // Inline "word. 2. Word" → only split if followed by capital (actual list continuation)
+    .replace(/([a-z,!?])\s+(\d+)\.\s+(?=[A-Z])/g, '$1\n$2. ')
     .replace(/^\s*/, '')
 
   const lines = normalised.split('\n')
   const nodes: React.ReactNode[] = []
 
   lines.forEach((line, i) => {
-    const numbered = line.match(/^(\d+)\.\s+(.*)/)
+    const numbered = line.match(/^(\d+)\.\s+([A-Z*].*)/)
     const bullet = line.match(/^[-•]\s+(.*)/)
 
     if (numbered) {
@@ -440,6 +444,7 @@ export default function FriendProfile() {
     noteCount: friend.notes.length,
     impressionCount: impressions.length,
     factCount: friend.facts.length,
+    interestCount: friend.interests.length,
   })
 
   const handleSaveFact = async () => {
@@ -570,8 +575,6 @@ export default function FriendProfile() {
             }} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 'var(--radius-full)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' as any }} title="Customize style"><IconPaintbrush size={16} /></button>
           </div>
 
-          {/* Replay tour button — separate from edit group */}
-          <button onClick={() => { localStorage.removeItem('profile_tour_complete'); setShowProfileTour(true) }} style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 'var(--radius-full)', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' as any, fontSize: '0.7rem', fontWeight: 700, opacity: 0.6 }} title="Replay tour">?</button>
 
           <div style={{ display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Avatar + freshness ring */}
@@ -585,7 +588,14 @@ export default function FriendProfile() {
 
             {/* Name + meta + badges */}
             <div style={{ flex: 1, minWidth: 160, color: 'white' }}>
-              <h1 style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '2rem', fontWeight: 500, marginBottom: friend.nickname ? 2 : 4, lineHeight: 1.15, ...(effect === 'gradient' ? { background: 'linear-gradient(135deg, white 0%, rgba(255,255,255,0.6) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : { color: 'white' }) }}>{friend.name}</h1>
+              <h1 style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '2rem', fontWeight: 500, marginBottom: friend.nickname ? 2 : 4, lineHeight: 1.15, display: 'flex', alignItems: 'center', gap: 10, ...(effect === 'gradient' ? { background: 'linear-gradient(135deg, white 0%, rgba(255,255,255,0.6) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : { color: 'white' }) }}>
+                {friend.name}
+                {(friend as any).starred && (
+                  <span style={{ opacity: 0.55, flexShrink: 0, ...(effect === 'gradient' ? { WebkitTextFillColor: 'rgba(255,255,255,0.55)' } : {}) }}>
+                    <IconStar size={16} filled />
+                  </span>
+                )}
+              </h1>
               {friend.nickname && (
                 <p style={{ fontFamily: fontFamily || 'var(--font-serif)', fontSize: '0.9rem', fontStyle: 'italic', color: 'white', opacity: 0.5, marginBottom: 6, marginTop: 0 }}>"{friend.nickname}"</p>
               )}
@@ -1074,12 +1084,12 @@ export default function FriendProfile() {
       {/* Radar Help */}
       <Modal open={showRadarHelp} onClose={() => setShowRadarHelp(false)} title="How the radar works" style={{ overflowY: 'visible' }}>
         {([
-          { name: 'Recency',     desc: 'How recently you hung out. Peaks at 100 within the last week, decays over time.',                                       tip: 'Log a hangout to bring this back up.' },
-          { name: 'Closeness',   desc: 'Total number of hangouts logged. Maxes out at 25+.',                                                                    tip: 'Keep logging hangouts together.' },
-          { name: 'Depth',       desc: "How much you've written about them — notes and impressions combined. Maxes at 10+ entries.",                            tip: 'Write a note or impression after your next hangout.' },
-          { name: 'Knowledge',   desc: 'Facts you\'ve recorded about them (likes, quirks, life details). Maxes at 8+ facts.',                                  tip: 'Add facts from the Overview tab.' },
-          { name: 'Consistency', desc: 'How regularly you hang out. A steady cadence scores higher than sporadic bursts.',                                      tip: 'Aim for a regular rhythm rather than gaps and clusters.' },
-          { name: 'Longevity',   desc: 'How long you\'ve known each other, based on when you met. Maxes at 5+ years.',                                        tip: 'Set the "Met" date on their profile to unlock this.' },
+          { name: 'Recency',     desc: 'How recently you hung out.',                                                                     tip: 'Log a hangout to bring this back up.' },
+          { name: 'Closeness',   desc: 'How often you see each other overall.',                                                              tip: 'Keep logging hangouts together.' },
+          { name: 'Depth',       desc: 'How much emotional texture you\'ve captured — driven by the impressions you write.',                 tip: 'Write an impression after your next meaningful hangout.' },
+          { name: 'Knowledge',   desc: 'How well you know them — built from facts, notes, and interests you\'ve logged.',                   tip: 'Add facts, jot notes, and log their interests.' },
+          { name: 'Consistency', desc: 'How regular your hangouts are. A steady rhythm scores higher than sporadic bursts.',                 tip: 'Aim for a regular cadence rather than gaps and clusters.' },
+          { name: 'Longevity',   desc: 'How long you\'ve known each other.',                                                                tip: 'Set the "Met" date on their profile to unlock this.' },
         ] as const).map((item, i, arr) => (
           <div key={item.name} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>

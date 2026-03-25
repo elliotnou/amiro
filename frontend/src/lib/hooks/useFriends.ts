@@ -53,5 +53,10 @@ export function useFriends() {
     return { error: error?.message ?? null }
   }
 
-  return { friends, loading, error, createFriend, deleteFriend, updateFriend, reload: load }
+  const toggleStar = async (id: string, starred: boolean) => {
+    setFriends(prev => prev.map(f => f.id === id ? { ...f, starred } as any : f))
+    await supabase.from('friends').update({ starred } as any).eq('id', id)
+  }
+
+  return { friends, loading, error, createFriend, deleteFriend, updateFriend, toggleStar, reload: load }
 }

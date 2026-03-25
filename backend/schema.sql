@@ -32,6 +32,7 @@ create table friends (
   met_date date,
   birthday text,
   day_count integer not null default 0,
+  starred boolean not null default false,
   tags text[] default '{}',
   interests text[] default '{}',
   ai_label text,

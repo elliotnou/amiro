@@ -557,6 +557,9 @@ img { display: block; max-width: 100%; }
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
+.friend-card-starrable:hover .friend-star-btn {
+  opacity: 1 !important;
+}
 
 .friend-card-avatar {
   width: 100%;

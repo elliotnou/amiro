@@ -9,8 +9,8 @@ interface HangoutDate { date: string }
 export interface RadarScores {
   recency: number      // How recently you hung out
   closeness: number    // Total hangout count
-  depth: number        // Notes + impressions written
-  knowledge: number    // Facts recorded
+  depth: number        // Impressions written
+  knowledge: number    // Facts + notes recorded
   consistency: number  // How regular the hangouts are
   longevity: number    // How long you've known them
 }
@@ -50,26 +50,26 @@ export function scoreCloseness(hangoutCount: number): number {
 }
 
 /**
- * Depth — notes + impressions as a proxy for emotional investment.
- * 10+ entries = 100.
+ * Depth — impressions only, as a proxy for emotional investment.
+ * 10+ impressions = 100.
  */
-export function scoreDepth(noteCount: number, impressionCount: number): number {
-  const total = noteCount + impressionCount
-  if (total === 0)  return 0
-  if (total === 1)  return 15
-  if (total <= 3)   return 35
-  if (total <= 6)   return 60
-  if (total <= 10)  return 80
+export function scoreDepth(impressionCount: number): number {
+  if (impressionCount === 0) return 0
+  if (impressionCount === 1) return 15
+  if (impressionCount <= 3)  return 35
+  if (impressionCount <= 6)  return 60
+  if (impressionCount <= 10) return 80
   return 100
 }
 
 /**
- * Knowledge — facts recorded about this person.
- * 8+ facts = 100.
+ * Knowledge — facts + notes + interests recorded about this person.
+ * Requires 20+ entries for max score.
  */
-export function scoreKnowledge(factCount: number): number {
-  if (factCount === 0) return 0
-  return Math.min(100, Math.round((factCount / 8) * 100))
+export function scoreKnowledge(factCount: number, noteCount: number, interestCount: number): number {
+  const total = factCount + noteCount + interestCount
+  if (total === 0) return 0
+  return Math.min(100, Math.round((total / 20) * 100))
 }
 
 /**
@@ -121,13 +121,14 @@ export function computeRadarScores(params: {
   noteCount: number
   impressionCount: number
   factCount: number
+  interestCount: number
   metDate: string | null
 }): RadarScores {
   return {
     recency:     scoreRecency(params.hangouts),
     closeness:   scoreCloseness(params.hangoutCount),
-    depth:       scoreDepth(params.noteCount, params.impressionCount),
-    knowledge:   scoreKnowledge(params.factCount),
+    depth:       scoreDepth(params.impressionCount),
+    knowledge:   scoreKnowledge(params.factCount, params.noteCount, params.interestCount),
     consistency: scoreConsistency(params.hangouts),
     longevity:   scoreLongevity(params.metDate),
   }
