@@ -181,7 +181,7 @@ export default function Friends() {
             location: f.location ?? null,
             tier: f.tier ?? null,
             day_count: f.day_count,
-            hangout_count: f.hangout_count,
+            hangout_count: hangoutCountById[f.id] ?? 0,
             starred: (f as any).starred ?? false,
           }))} />
         </div>
@@ -195,7 +195,7 @@ export default function Friends() {
               avatar_color: f.avatar_color,
               avatar_url: f.avatar_url ?? null,
               tier: f.tier ?? null,
-              hangout_count: f.hangout_count,
+              hangout_count: hangoutCountById[f.id] ?? 0,
               starred: (f as any).starred ?? false,
             }))}
             groups={friendGroups.map(g => ({ id: g.id, name: g.name, color: g.color, memberIds: g.memberIds }))}
