@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import { useFriends } from '../lib/hooks/useFriends'
 import { useFriendGroups } from '../lib/hooks/useFriendGroups'
@@ -221,8 +221,17 @@ export default function Hangouts() {
   const { friends } = useFriends()
   const { groups } = useFriendGroups()
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [showLogModal, setShowLogModal] = useState(false)
   const [view, setView] = useState<'list' | 'calendar'>('list')
+
+  // Auto-open log modal from ?log=1
+  useEffect(() => {
+    if (searchParams.get('log') === '1') {
+      setShowLogModal(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   const [bannerMap, setBannerMap] = useState<Record<string, string>>({})
   const photoInputRef = useRef<HTMLInputElement>(null)
 
@@ -363,13 +372,18 @@ export default function Hangouts() {
               { label: 'Words journalled', value: hangouts.reduce((sum, h) => sum + (h.highlights ? h.highlights.trim().split(/\s+/).filter(Boolean).length : 0), 0) },
             ].map(s => (
               <div key={s.label} style={{
-                flex: 1, padding: '14px 18px', background: 'var(--bg-card)',
-                borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)',
-                boxShadow: 'var(--shadow-sm)',
-                display: 'flex', flexDirection: 'column', gap: 4,
+                flex: 1, background: '#ffffff', borderRadius: 22, padding: 7,
+                border: '1px solid rgba(0,0,0,0.06)',
               }}>
-                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.3rem', fontWeight: 500, lineHeight: 1 }}>{s.value}</span>
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</span>
+                <div style={{
+                  background: 'linear-gradient(to bottom right, #ffffff 0%, #fefcfb 50%, #faf8f6 100%)',
+                  borderRadius: 16, padding: '14px 18px',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  display: 'flex', flexDirection: 'column', gap: 4,
+                }}>
+                  <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.3rem', fontWeight: 500, lineHeight: 1 }}>{s.value}</span>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</span>
+                </div>
               </div>
             ))}
           </div>

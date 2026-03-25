@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useFriends } from '../lib/hooks/useFriends'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import AddFriendFlow from '../components/AddFriendFlow'
@@ -25,6 +25,15 @@ export default function Friends() {
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('recent')
   const [showFlow, setShowFlow] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Auto-open add flow from ?add=1
+  useEffect(() => {
+    if (searchParams.get('add') === '1') {
+      setShowFlow(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const hangoutCountById = hangouts.reduce<Record<string, number>>((acc, h) => {
     for (const hf of h.hangout_friends) {
