@@ -16,6 +16,7 @@ import Stats from './pages/Stats'
 import Settings from './pages/Settings'
 import { AIGiftIdeas, AIHangoutIdeas, AIFriendshipStory } from './pages/AI'
 import FriendGroups from './pages/FriendGroups'
+import GroupDetailPage from './pages/GroupDetail'
 import Upgrade from './pages/Upgrade'
 import Onboarding from './pages/Onboarding'
 
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/ai/story/:friendId" element={<ProtectedRoute><AppLayout><AIFriendshipStory /></AppLayout></ProtectedRoute>} />
         <Route path="/upgrade" element={<ProtectedRoute><AppLayout><Upgrade /></AppLayout></ProtectedRoute>} />
         <Route path="/groups" element={<ProtectedRoute><AppLayout><FriendGroups /></AppLayout></ProtectedRoute>} />
+        <Route path="/groups/:id" element={<ProtectedRoute><AppLayout><GroupDetailPage /></AppLayout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
         <Route path="/onboarding" element={<Onboarding />} />
       </Routes>

@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useFriendGroups } from '../lib/hooks/useFriendGroups'
 import { useFriends } from '../lib/hooks/useFriends'
 import Modal from '../components/Modal'
@@ -51,15 +51,15 @@ function AvatarStack({ members, size = 30 }: { members: FriendRow[]; size?: numb
   )
 }
 
-function GroupCard({ group, members, onClick }: {
+function GroupCard({ group, members }: {
   group: FriendGroupWithMembers
   members: FriendRow[]
-  onClick: () => void
 }) {
+  const navigate = useNavigate()
   const [hovered, setHovered] = useState(false)
   return (
     <div
-      onClick={onClick}
+      onClick={() => navigate(`/groups/${group.id}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -112,11 +112,12 @@ function GroupCard({ group, members, onClick }: {
 }
 
 // ── Create / Edit flow ─────────────────────────────────────────────────────
-interface FlowProps {
+export interface FlowProps {
   allFriends: FriendRow[]
   initialGroup?: FriendGroupWithMembers
-  onSave: (name: string, color: string, friendIds: string[], avatarUrl: string | null) => Promise<void>
+  onSave: (name: string, color: string, friendIds: string[], avatarUrl: string | null, description: string | null) => Promise<void>
   onClose: () => void
+  onDelete?: () => Promise<void>
 }
 
 function FriendRow({ f, color, isSelected, onToggle }: { f: FriendRow; color: string; isSelected: boolean; onToggle: () => void }) {
@@ -158,13 +159,16 @@ function FriendRow({ f, color, isSelected, onToggle }: { f: FriendRow; color: st
   )
 }
 
-function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
+export function GroupFlow({ allFriends, initialGroup, onSave, onClose, onDelete }: FlowProps) {
   const [step, setStep] = useState(0)
   const [name, setName] = useState(initialGroup?.name ?? '')
+  const [description, setDescription] = useState(initialGroup?.description ?? '')
   const [color, setColor] = useState(initialGroup?.color ?? COLORS[Math.floor(Math.random() * COLORS.length)])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialGroup?.memberIds ?? []))
   const [friendSearch, setFriendSearch] = useState('')
   const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(initialGroup?.avatar_url ?? null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarRemoved, setAvatarRemoved] = useState(false)
@@ -202,7 +206,7 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
     } else {
       finalAvatarUrl = avatarPreview
     }
-    await onSave(name.trim(), color, [...selectedIds], finalAvatarUrl)
+    await onSave(name.trim(), color, [...selectedIds], finalAvatarUrl, description.trim() || null)
     setSaving(false)
   }
 
@@ -285,6 +289,17 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
                 style={{ fontSize: '1rem', marginBottom: 22, fontFamily: 'var(--font-serif)' }}
               />
 
+              {/* Description */}
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.67rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Description</p>
+              <textarea
+                className="form-input"
+                placeholder="What's this group about?"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={2}
+                style={{ fontSize: '0.88rem', marginBottom: 22, fontFamily: 'var(--font-sans)', resize: 'vertical' }}
+              />
+
               {/* Color */}
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.67rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Color</p>
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 22 }}>
@@ -325,6 +340,54 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
               >
                 {saving ? 'Saving…' : 'Save changes'}
               </button>
+
+              {onDelete && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+                  {!confirmDelete ? (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      style={{
+                        width: '100%', padding: '11px', borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border)', background: 'transparent',
+                        color: 'var(--text-muted)', fontFamily: 'var(--font-sans)',
+                        fontSize: '0.82rem', cursor: 'pointer',
+                        transition: 'color 150ms, border-color 150ms',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#c0392b'; e.currentTarget.style.borderColor = '#c0392b50' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                    >
+                      Delete group
+                    </button>
+                  ) : (
+                    <div>
+                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center' }}>
+                        Are you sure? This can't be undone.
+                      </p>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => setConfirmDelete(false)}
+                          className="btn btn-ghost"
+                          style={{ flex: 1, padding: '10px', fontSize: '0.82rem', borderRadius: 'var(--radius-md)' }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => { setDeleting(true); await onDelete(); }}
+                          disabled={deleting}
+                          style={{
+                            flex: 1, padding: '10px', borderRadius: 'var(--radius-md)',
+                            border: 'none', background: '#c0392b', color: 'white',
+                            fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.82rem',
+                            cursor: 'pointer', opacity: deleting ? 0.6 : 1,
+                          }}
+                        >
+                          {deleting ? 'Deleting…' : 'Delete'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -408,7 +471,16 @@ function GroupFlow({ allFriends, initialGroup, onSave, onClose }: FlowProps) {
                 <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
               </div>
 
-              <input autoFocus className="form-input" placeholder="e.g. The Homies, Work Crew, Book Club" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name.trim() && setStep(1)} style={{ fontSize: '1rem', marginBottom: 20, fontFamily: 'var(--font-serif)' }} />
+              <input autoFocus className="form-input" placeholder="e.g. The Homies, Work Crew, Book Club" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name.trim() && setStep(1)} style={{ fontSize: '1rem', marginBottom: 16, fontFamily: 'var(--font-serif)' }} />
+
+              <textarea
+                className="form-input"
+                placeholder="Add a short description (optional)"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={2}
+                style={{ fontSize: '0.86rem', marginBottom: 20, fontFamily: 'var(--font-sans)', resize: 'vertical' }}
+              />
 
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.67rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Color</p>
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -579,24 +651,33 @@ function GroupDetail({ group, allFriends, onClose, onDelete, onEdit }: DetailPro
 export default function FriendGroups() {
   const { groups, loading, createGroup, updateGroup, deleteGroup } = useFriendGroups()
   const { friends } = useFriends()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [showCreate, setShowCreate] = useState(false)
   const [openGroupId, setOpenGroupId] = useState<string | null>(null)
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(() => searchParams.get('edit'))
+
+  // Auto-open edit flow from ?edit=<id> (navigated back from GroupDetail)
+  useEffect(() => {
+    const editId = searchParams.get('edit')
+    if (editId) {
+      setEditingGroupId(editId)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const openGroup = groups.find(g => g.id === openGroupId)
   const editingGroup = groups.find(g => g.id === editingGroupId)
 
-  const handleCreate = async (name: string, color: string, friendIds: string[], avatarUrl: string | null) => {
-    await createGroup({ name, color, avatar_url: avatarUrl }, friendIds)
+  const handleCreate = async (name: string, color: string, friendIds: string[], avatarUrl: string | null, description: string | null) => {
+    await createGroup({ name, color, avatar_url: avatarUrl, description }, friendIds)
     setShowCreate(false)
   }
 
-  const handleEdit = async (name: string, color: string, friendIds: string[], avatarUrl: string | null) => {
+  const handleEdit = async (name: string, color: string, friendIds: string[], avatarUrl: string | null, description: string | null) => {
     if (!editingGroupId) return
-    await updateGroup(editingGroupId, { name, color, avatar_url: avatarUrl }, friendIds)
+    await updateGroup(editingGroupId, { name, color, avatar_url: avatarUrl, description }, friendIds)
     setEditingGroupId(null)
-    setOpenGroupId(null)
   }
 
   const handleDelete = async () => {
@@ -667,7 +748,6 @@ export default function FriendGroups() {
               key={g.id}
               group={g}
               members={membersOf(g)}
-              onClick={() => setOpenGroupId(g.id)}
             />
           ))}
           {/* Add tile */}

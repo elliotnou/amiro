@@ -1252,7 +1252,7 @@ export default function FriendProfile() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
           <div className="form-group">
             <label className="form-label">Name</label>
-            <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Full name" />
+            <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Full name" maxLength={30} />
           </div>
           <div className="form-group">
             <label className="form-label">Nickname</label>
