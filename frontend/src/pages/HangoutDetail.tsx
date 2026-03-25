@@ -5,6 +5,7 @@ import { useFriends } from '../lib/hooks/useFriends'
 import { useFriendGroups } from '../lib/hooks/useFriendGroups'
 import { useGallery } from '../lib/hooks/useGallery'
 import Modal from '../components/Modal'
+import LoadingScreen from '../components/LoadingScreen'
 import { IconArrowLeft } from '../components/Icons'
 
 function typeAccent(type: string): string {
@@ -154,7 +155,7 @@ if (section === 'friends') {
     navigate('/hangouts')
   }
 
-  if (loading) return <div className="page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}><p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--text-muted)' }}>Loading…</p></div>
+  if (loading) return <LoadingScreen />
   if (!hangout) return <div className="page-container"><p>Hangout not found.</p></div>
 
   const accent = typeAccent(hangout.type)

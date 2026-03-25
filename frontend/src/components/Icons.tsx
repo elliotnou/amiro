@@ -188,7 +188,7 @@ export function IconGroups({ size = 20 }: { size?: number }) {
       <circle cx="16" cy="8" r="3"/>
       <circle cx="12" cy="17" r="3"/>
     </svg>
-  )
+  ) 
 }
 
 export function IconSettings({ size = 20 }: { size?: number }) {

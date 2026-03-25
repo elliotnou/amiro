@@ -135,9 +135,8 @@ export default function Home() {
   const upcomingBirthdays = friends
     .filter((f: any) => f.birthday)
     .map((f: any) => ({ ...f, daysUntil: daysUntilBirthday(f.birthday!) }))
-    .filter(f => f.daysUntil <= 30 && f.daysUntil >= 0)
     .sort((a, b) => a.daysUntil - b.daysUntil)
-    .slice(0, 2)
+    .slice(0, 3)
 
   if (!friendsLoading && friends.length === 0) return <Navigate to="/onboarding" replace />
 
@@ -440,91 +439,132 @@ export default function Home() {
                   </div>
                 </Link>
               </div>
-              {upcomingBirthdays.length > 0 && (
-                <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>Upcoming birthdays</span>
-                  {upcomingBirthdays.map((f: any) => (
-                    <Link key={f.id} to={`/friends/${f.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', textDecoration: 'none' }}>
-                      <span style={{ fontSize: '0.9rem' }}>🎂</span>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.74rem', color: 'var(--text-secondary)' }}>{f.name.split(' ')[0]}</span>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.65rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-                        {f.daysUntil === 0 ? 'Today!' : f.daysUntil === 1 ? 'Tomorrow' : `in ${f.daysUntil}d`}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              )}
             </>
           )}
         </Widget>
       </div>
 
-      {/* ═══ RECENT HANGOUTS ═══ */}
-      {recentHangouts.length > 0 && (
-        <div className="animate-in animate-in-3" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem', fontWeight: 500 }}>Recent hangouts</span>
-            <Link to="/hangouts?log=1" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', fontWeight: 500, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-              <IconPlus size={12} /> Log new
-            </Link>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-            {recentHangouts.map((h: any) => {
-              const friendAvatars = h.hangout_friends.slice(0, 3)
-              return (
-                <Widget key={h.id} style={{ padding: 8 }}>
-                  <Link to={`/hangouts/${h.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', overflow: 'hidden' }}>
-                    <span style={{
-                      position: 'absolute', top: -10, right: -4,
-                      fontFamily: 'var(--font-serif)', fontSize: '4.8rem', fontWeight: 700,
-                      color: 'var(--accent)', opacity: 0.035, lineHeight: 1, pointerEvents: 'none',
-                    }}>
-                      {h.type.charAt(0).toUpperCase()}
-                    </span>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: '0.92rem', color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {h.type}
+      {/* ═══ RECENT HANGOUTS + BIRTHDAYS ═══ */}
+      {(recentHangouts.length > 0 || upcomingBirthdays.length > 0) && (
+        <div className="animate-in animate-in-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24, alignItems: 'start' }}>
+
+          {/* Left: Recent hangouts */}
+          {recentHangouts.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem', fontWeight: 500 }}>Recent hangouts</span>
+                <Link to="/hangouts?log=1" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', fontWeight: 500, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+                  <IconPlus size={12} /> Log new
+                </Link>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recentHangouts.slice(0, 3).map((h: any) => {
+                  const friendAvatars = h.hangout_friends.slice(0, 3)
+                  return (
+                    <Widget key={h.id} style={{ padding: 8 }}>
+                      <Link to={`/hangouts/${h.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', overflow: 'hidden' }}>
+                        <span style={{
+                          position: 'absolute', top: -10, right: -4,
+                          fontFamily: 'var(--font-serif)', fontSize: '4.8rem', fontWeight: 700,
+                          color: 'var(--accent)', opacity: 0.035, lineHeight: 1, pointerEvents: 'none',
+                        }}>
+                          {h.type.charAt(0).toUpperCase()}
+                        </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: '0.92rem', color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {h.type}
+                            </div>
+                            {h.location && (
+                              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {h.location}
+                              </div>
+                            )}
+                          </div>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8, marginTop: 3, background: 'var(--border)', padding: '2px 8px', borderRadius: 20 }}>
+                            {formatDate(h.date)}
+                          </span>
                         </div>
-                        {h.location && (
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {h.location}
+                        {friendAvatars.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <div style={{ display: 'flex' }}>
+                              {friendAvatars.map((hf: any, i: number) => {
+                                const f = friends.find((fr: any) => fr.id === hf.friend_id)
+                                return (
+                                  <div key={hf.id} style={{
+                                    width: 24, height: 24, borderRadius: '50%', background: f?.avatar_color ?? '#ccc',
+                                    border: `2px solid ${isDark ? '#1c1c22' : 'white'}`, marginLeft: i > 0 ? -7 : 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    overflow: 'hidden', position: 'relative', zIndex: friendAvatars.length - i,
+                                  }}>
+                                    {f?.avatar_url
+                                      ? <img src={f.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      : <span style={{ fontSize: '0.45rem', color: 'white', fontWeight: 600 }}>{f?.initials ?? '?'}</span>}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.66rem', color: 'var(--text-muted)', marginLeft: 8 }}>
+                              {h.hangout_friends.length === 1 ? h.hangout_friends[0].friend_name.split(' ')[0] : `${h.hangout_friends.length} friends`}
+                            </span>
                           </div>
                         )}
-                      </div>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8, marginTop: 3, background: 'var(--border)', padding: '2px 8px', borderRadius: 20 }}>
-                        {formatDate(h.date)}
-                      </span>
-                    </div>
-                    {friendAvatars.length > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{ display: 'flex' }}>
-                          {friendAvatars.map((hf: any, i: number) => {
-                            const f = friends.find((fr: any) => fr.id === hf.friend_id)
-                            return (
-                              <div key={hf.id} style={{
-                                width: 24, height: 24, borderRadius: '50%', background: f?.avatar_color ?? '#ccc',
-                                border: `2px solid ${isDark ? '#1c1c22' : 'white'}`, marginLeft: i > 0 ? -7 : 0,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                overflow: 'hidden', position: 'relative', zIndex: friendAvatars.length - i,
-                              }}>
-                                {f?.avatar_url
-                                  ? <img src={f.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                  : <span style={{ fontSize: '0.45rem', color: 'white', fontWeight: 600 }}>{f?.initials ?? '?'}</span>}
-                              </div>
-                            )
-                          })}
+                      </Link>
+                    </Widget>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Right: Upcoming birthdays — frameless conveyor */}
+          {upcomingBirthdays.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
+                <IconCake size={14} />
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem', fontWeight: 500 }}>Birthdays</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {upcomingBirthdays.map((f: any) => {
+                  const tc = tierColors[f.tier] ?? 'var(--border)'
+                  const bdDate = new Date(f.birthday + 'T00:00:00')
+                  const label = f.daysUntil === 0 ? 'Today!' : f.daysUntil === 1 ? 'Tomorrow' : `${f.daysUntil}d`
+                  const soon = f.daysUntil <= 7
+                  return (
+                    <Link key={f.id} to={`/friends/${f.id}`} style={{ textDecoration: 'none', color: 'inherit', flex: 1 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', padding: '10px 4px' }}>
+                        <div style={{
+                          width: 46, height: 46, borderRadius: '50%', background: f.avatar_color,
+                          border: `2.5px solid ${tc}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                        }}>
+                          {f.avatar_url
+                            ? <img src={f.avatar_url} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : <span style={{ color: 'white', fontFamily: 'var(--font-serif)', fontSize: '0.68rem', fontWeight: 500 }}>{f.initials}</span>}
                         </div>
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.66rem', color: 'var(--text-muted)', marginLeft: 8 }}>
-                          {h.hangout_friends.length === 1 ? h.hangout_friends[0].friend_name.split(' ')[0] : `${h.hangout_friends.length} friends`}
+                        <div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.83rem', fontWeight: 600, color: 'var(--text)' }}>
+                            {f.name.split(' ')[0]}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
+                            {MONTH_ABBR[bdDate.getMonth()]} {bdDate.getDate()}
+                          </div>
+                        </div>
+                        <span style={{
+                          fontFamily: 'var(--font-serif)', fontWeight: 700,
+                          fontSize: soon ? '0.95rem' : '0.82rem',
+                          color: soon ? 'var(--accent)' : 'var(--text)',
+                          letterSpacing: soon ? '-0.01em' : '0',
+                        }}>
+                          {label}
                         </span>
                       </div>
-                    )}
-                  </Link>
-                </Widget>
-              )
-            })}
-          </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
