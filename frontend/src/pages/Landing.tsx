@@ -42,7 +42,7 @@ export default function Landing() {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fdfaf8', overflowX: 'hidden' }}>
+    <div data-theme="light" style={{ minHeight: '100vh', background: '#fdfaf8', overflowX: 'hidden', color: '#111118' }}>
 
       {/* ═══ NAV ═══ */}
       <nav style={{

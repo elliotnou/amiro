@@ -68,7 +68,145 @@
 
   /* Transition */
   --ease: 150ms ease;
+
+  /* Dark-mode aware colors (used by inline styles) */
+  --widget-outer: #ffffff;
+  --widget-border: rgba(0,0,0,0.06);
+  --widget-inner-default: linear-gradient(to bottom right, #ffffff 0%, #fefcfb 50%, #faf8f6 100%);
+  --hero-gradient: linear-gradient(135deg, #fef0ec 0%, #fdf6f0 40%, #f0eff8 100%);
+  --tooltip-bg: #2a2a3a;
+  --tooltip-text: #ffffff;
 }
+
+/* ── Dark mode ── */
+[data-theme="dark"] {
+  /* Surface */
+  --bg: #131316;
+  --bg-card: #1c1c22;
+  --bg-sidebar: #18181e;
+  --bg-hover: #24242c;
+  --bg-active: #2c2c36;
+  --bg-modal-backdrop: rgba(0, 0, 0, 0.6);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.1);
+
+  /* Text */
+  --text: #ede9e6;
+  --text-secondary: #b8b4b0;
+  --text-muted: #7a7778;
+  --text-inverse: #131316;
+
+  /* Tier accents — slightly brighter for dark bg */
+  --inner-circle: #e8876e;
+  --inner-circle-bg: rgba(232, 135, 110, 0.12);
+  --close-friend: #5a93b5;
+  --close-friend-bg: rgba(90, 147, 181, 0.12);
+  --casual: #d4b87a;
+  --casual-bg: rgba(212, 184, 122, 0.12);
+
+  /* AI accent */
+  --ai: #9487cf;
+  --ai-bg: rgba(148, 135, 207, 0.1);
+  --ai-border: rgba(148, 135, 207, 0.2);
+
+  /* Functional */
+  --positive: #5cb87e;
+  --positive-bg: rgba(92, 184, 126, 0.1);
+  --negative: #d47070;
+  --negative-bg: rgba(212, 112, 112, 0.1);
+  --accent: #e8876e;
+  --accent-bg: rgba(232, 135, 110, 0.1);
+
+  /* Shadow — deeper for dark */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.2);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2);
+
+  /* Dark-mode widget overrides */
+  --widget-outer: #1c1c22;
+  --widget-border: rgba(255,255,255,0.06);
+  --widget-inner-default: linear-gradient(to bottom right, #22222a 0%, #1f1f26 50%, #1c1c22 100%);
+  --hero-gradient: linear-gradient(135deg, #201a18 0%, #1e1c1a 40%, #1a1920 100%);
+  --tooltip-bg: #2c2c34;
+  --tooltip-text: #ede9e6;
+
+  color-scheme: dark;
+}
+
+[data-theme="dark"] .btn-primary {
+  background: rgba(232, 135, 110, 0.12);
+  color: #e8876e;
+  border-color: rgba(232, 135, 110, 0.22);
+}
+[data-theme="dark"] .btn-primary:hover {
+  background: rgba(232, 135, 110, 0.2);
+  border-color: rgba(232, 135, 110, 0.35);
+}
+
+[data-theme="dark"] .btn-default {
+  background: var(--bg-card);
+  border-color: var(--border-strong);
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-textarea {
+  background: var(--bg-card);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+[data-theme="dark"] .search-bar input {
+  color: var(--text);
+}
+
+[data-theme="dark"] .modal-content {
+  background: #1c1c22;
+  border-color: rgba(255,255,255,0.08);
+}
+
+[data-theme="dark"] .checkbox {
+  border-color: rgba(255,255,255,0.15);
+}
+
+[data-theme="dark"] .sidebar {
+  background: #18181e;
+  border-right-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .sidebar-link.active {
+  background: rgba(232, 135, 110, 0.1);
+  color: #e8876e;
+}
+
+[data-theme="dark"] .friend-card {
+  background: #1c1c22;
+  border-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .friend-card:hover {
+  border-color: rgba(255,255,255,0.12);
+}
+
+[data-theme="dark"] .search-bar {
+  background: #1c1c22;
+  border-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .add-friend-card {
+  background: #1c1c22;
+  border-color: rgba(255,255,255,0.06);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] select.form-input {
+  background: #1c1c22;
+  color: var(--text);
+}
+
+[data-theme="dark"] .app-layout img[src*="pagelogo"] {
+  mix-blend-mode: multiply;
+}
+
 
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -86,6 +224,7 @@ body {
   color: var(--text);
   line-height: 1.6;
   min-height: 100vh;
+  transition: background 200ms ease, color 200ms ease;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -653,13 +792,18 @@ img { display: block; max-width: 100%; }
 }
 
 .btn-primary {
-  background: var(--text);
-  color: var(--text-inverse);
-  border-radius: var(--radius-md);
+  background: rgba(224, 122, 95, 0.08);
+  color: #e07a5f;
+  border: 1px solid rgba(224, 122, 95, 0.18);
+  border-radius: 12px;
   padding: 8px 18px;
+  font-weight: 500;
+  transition: background 150ms ease, border-color 150ms ease;
 }
 .btn-primary:hover {
-  opacity: 0.82;
+  background: rgba(224, 122, 95, 0.14);
+  border-color: rgba(224, 122, 95, 0.3);
+  opacity: 1;
 }
 
 /* ── AI cursor ── */

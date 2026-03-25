@@ -141,6 +141,8 @@ if (section === 'friends') {
     if (isDeselecting) {
       const memberIds = new Set(groups.find(g => g.id === id)?.memberIds ?? [])
       setEditFriendIds(prev => prev.filter(f => !memberIds.has(f)))
+    } else {
+      setEditFriendIds([])
     }
   }
 

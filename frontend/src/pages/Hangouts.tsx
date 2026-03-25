@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import { useFriends } from '../lib/hooks/useFriends'
 import { useFriendGroups } from '../lib/hooks/useFriendGroups'
+import { useTheme } from '../lib/ThemeContext'
 import { uploadImage } from '../lib/cloudinary'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -221,6 +222,7 @@ export default function Hangouts() {
   const { friends } = useFriends()
   const { groups } = useFriendGroups()
   const { user } = useAuth()
+  const { isDark } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
   const [showLogModal, setShowLogModal] = useState(false)
   const [view, setView] = useState<'list' | 'calendar'>('list')
@@ -274,6 +276,8 @@ export default function Hangouts() {
     if (isDeselecting) {
       const memberIds = new Set(groups.find(g => g.id === id)?.memberIds ?? [])
       setHSelectedFriends(prev => prev.filter(f => !memberIds.has(f)))
+    } else {
+      setHSelectedFriends([])
     }
   }
 
@@ -372,13 +376,13 @@ export default function Hangouts() {
               { label: 'Words journalled', value: hangouts.reduce((sum, h) => sum + (h.highlights ? h.highlights.trim().split(/\s+/).filter(Boolean).length : 0), 0) },
             ].map(s => (
               <div key={s.label} style={{
-                flex: 1, background: '#ffffff', borderRadius: 22, padding: 7,
-                border: '1px solid rgba(0,0,0,0.06)',
+                flex: 1, background: isDark ? '#1c1c22' : '#ffffff', borderRadius: 22, padding: 7,
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
               }}>
                 <div style={{
-                  background: 'linear-gradient(to bottom right, #ffffff 0%, #fefcfb 50%, #faf8f6 100%)',
+                  background: isDark ? 'linear-gradient(to bottom right, #22222a 0%, #1f1f26 50%, #1c1c22 100%)' : 'linear-gradient(to bottom right, #ffffff 0%, #fefcfb 50%, #faf8f6 100%)',
                   borderRadius: 16, padding: '14px 18px',
-                  border: '1px solid rgba(0,0,0,0.06)',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
                   display: 'flex', flexDirection: 'column', gap: 4,
                 }}>
                   <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.3rem', fontWeight: 500, lineHeight: 1 }}>{s.value}</span>

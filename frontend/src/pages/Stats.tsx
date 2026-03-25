@@ -3,6 +3,7 @@ import { useHangouts } from '../lib/hooks/useHangouts'
 import { tierColor, tierLabel } from '../data/mock'
 import Avatar from '../components/Avatar'
 import { Link } from 'react-router-dom'
+import { useTheme } from '../lib/ThemeContext'
 
 // ── Mini donut ring via SVG ───────────────────────────────────────────
 function DonutRing({ segments, size = 120 }: {
@@ -89,6 +90,7 @@ function DowChart({ counts }: { counts: number[] }) {
 export default function Stats() {
   const { friends } = useFriends()
   const { hangouts } = useHangouts()
+  const { isDark } = useTheme()
 
   // ── Core numbers ────────────────────────────────────────────────────
   const totalFriends = friends.length
@@ -196,13 +198,13 @@ export default function Stats() {
   // ── Card shell (double-rectangle frame) ─────────────────────────────
   const Card = ({ children, style = {}, innerBg }: { children: React.ReactNode; style?: React.CSSProperties; innerBg?: string }) => (
     <div style={{
-      background: '#ffffff', borderRadius: 22, padding: 8,
-      border: '1px solid rgba(0,0,0,0.06)', ...style
+      background: isDark ? '#1c1c22' : '#ffffff', borderRadius: 22, padding: 8,
+      border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, ...style
     }}>
       <div style={{
-        background: innerBg || 'linear-gradient(to bottom right, #ffffff 0%, #fefcfb 50%, #faf8f6 100%)',
+        background: isDark ? 'linear-gradient(to bottom right, #22222a 0%, #1f1f26 50%, #1c1c22 100%)' : (innerBg || 'linear-gradient(to bottom right, #ffffff 0%, #fefcfb 50%, #faf8f6 100%)'),
         borderRadius: 16, padding: '20px 22px',
-        border: '1px solid rgba(0,0,0,0.06)', height: '100%',
+        border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, height: '100%',
       }}>
         {children}
       </div>
@@ -229,12 +231,12 @@ export default function Stats() {
           { label: 'Words journalled', value: wordsJournalled.toLocaleString(), color: '#9b8ec4', gradient: 'linear-gradient(to bottom right, #ffffff 0%, #fbfafd 50%, #f7f5fb 100%)' },
         ].map(s => (
           <div key={s.label} style={{
-            background: '#ffffff', borderRadius: 22, padding: 7,
-            border: '1px solid rgba(0,0,0,0.06)',
+            background: isDark ? '#1c1c22' : '#ffffff', borderRadius: 22, padding: 7,
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
           }}>
             <div style={{
-              background: s.gradient, borderRadius: 16, padding: '14px 16px',
-              border: '1px solid rgba(0,0,0,0.06)',
+              background: isDark ? 'linear-gradient(to bottom right, #22222a 0%, #1f1f26 50%, #1c1c22 100%)' : s.gradient, borderRadius: 16, padding: '14px 16px',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
             }}>
               <div style={{ marginBottom: 6 }}>
                 <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.7rem', fontWeight: 600, color: s.color, lineHeight: 1.2 }}>{s.value}</span>

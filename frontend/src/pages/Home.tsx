@@ -5,6 +5,7 @@ import { useHangouts } from '../lib/hooks/useHangouts'
 import { useNudges } from '../lib/hooks/useNudges'
 import { useDebts } from '../lib/hooks/useDebts'
 import { useAuth } from '../lib/auth'
+import { useTheme } from '../lib/ThemeContext'
 import { IconClock, IconCake, IconCheck, IconPlus } from '../components/Icons'
 
 const nudgeIcons = { clock: IconClock, cake: IconCake, check: IconCheck }
@@ -52,11 +53,15 @@ const tierColors: Record<string, string> = {
   'casual': '#c9a96e',
 }
 
-// Double-rectangle wrapper: outer frame + inner white card
-function Widget({ children, className, style, innerBg }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; innerBg?: string }) {
+// Double-rectangle wrapper: outer frame + inner card
+function Widget({ children, className, style, innerBg, darkInnerBg }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; innerBg?: string; darkInnerBg?: string }) {
+  const { isDark } = useTheme()
+  const bg = isDark
+    ? (darkInnerBg || 'linear-gradient(to bottom right, #22222a 0%, #1f1f26 50%, #1c1c22 100%)')
+    : (innerBg || 'linear-gradient(to bottom right, #ffffff 0%, #fdfaf8 40%, #faf5f2 100%)')
   return (
-    <div className={className} style={{ background: '#ffffff', borderRadius: 22, padding: 10, border: '1px solid rgba(0,0,0,0.06)', ...style }}>
-      <div style={{ background: innerBg || 'linear-gradient(to bottom right, #ffffff 0%, #fdfaf8 40%, #faf5f2 100%)', borderRadius: 16, padding: '22px 24px', border: '1px solid rgba(0,0,0,0.06)', height: '100%' }}>
+    <div className={className} style={{ background: isDark ? '#1c1c22' : '#ffffff', borderRadius: 22, padding: 10, border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, ...style }}>
+      <div style={{ background: bg, borderRadius: 16, padding: '22px 24px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, height: '100%' }}>
         {children}
       </div>
     </div>
@@ -65,6 +70,7 @@ function Widget({ children, className, style, innerBg }: { children: React.React
 
 export default function Home() {
   const { user } = useAuth()
+  const { isDark } = useTheme()
   const { friends, loading: friendsLoading } = useFriends()
   const { hangouts } = useHangouts()
   const { nudges, dismissNudge } = useNudges()
@@ -128,35 +134,35 @@ export default function Home() {
 
       {/* ═══ HERO BANNER ═══ */}
       <div className="animate-in" style={{
-        background: '#ffffff', borderRadius: 22, padding: 10,
-        border: '1px solid rgba(0,0,0,0.06)', marginBottom: 24,
+        background: isDark ? '#1c1c22' : '#ffffff', borderRadius: 22, padding: 10,
+        border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, marginBottom: 24,
       }}>
       <div style={{
-        background: 'linear-gradient(135deg, #fef0ec 0%, #fdf6f0 40%, #f0eff8 100%)',
+        background: isDark ? 'linear-gradient(135deg, #201a18 0%, #1e1c1a 40%, #1a1920 100%)' : 'linear-gradient(135deg, #fef0ec 0%, #fdf6f0 40%, #f0eff8 100%)',
         borderRadius: 16, padding: '34px 38px 30px',
-        border: '1px solid rgba(0,0,0,0.06)',
+        border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
         position: 'relative', overflow: 'hidden',
       }}>
-        <div style={{ position: 'absolute', top: -40, right: -30, width: 140, height: 140, borderRadius: '50%', background: 'rgba(224,122,95,0.07)' }} />
-        <div style={{ position: 'absolute', bottom: -50, right: 80, width: 100, height: 100, borderRadius: '50%', background: 'rgba(124,111,189,0.05)' }} />
-        <div style={{ position: 'absolute', top: 10, left: -40, width: 90, height: 90, borderRadius: '50%', background: 'rgba(201,169,110,0.06)' }} />
+        <div style={{ position: 'absolute', top: -40, right: -30, width: 140, height: 140, borderRadius: '50%', background: isDark ? 'rgba(232,135,110,0.06)' : 'rgba(224,122,95,0.07)' }} />
+        <div style={{ position: 'absolute', bottom: -50, right: 80, width: 100, height: 100, borderRadius: '50%', background: isDark ? 'rgba(148,135,207,0.05)' : 'rgba(124,111,189,0.05)' }} />
+        <div style={{ position: 'absolute', top: 10, left: -40, width: 90, height: 90, borderRadius: '50%', background: isDark ? 'rgba(212,184,122,0.05)' : 'rgba(201,169,110,0.06)' }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <h1 style={{
             fontFamily: 'var(--font-serif)', fontSize: '2.1rem', fontWeight: 500,
-            color: '#2a2a3a', marginBottom: 6, lineHeight: 1.15,
+            color: 'var(--text)', marginBottom: 6, lineHeight: 1.15,
           }}>
             {getGreeting()}{displayName ? `, ${displayName}` : ''}
           </h1>
           <p style={{
-            fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: '#7a7a90',
+            fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text-muted)',
             marginBottom: 22, lineHeight: 1.5,
           }}>
             {thisMonthCount > 0
-              ? <>You've had <strong style={{ color: '#e07a5f', fontWeight: 600 }}>{thisMonthCount} hangout{thisMonthCount !== 1 ? 's' : ''}</strong> this month</>
+              ? <>You've had <strong style={{ color: 'var(--accent)', fontWeight: 600 }}>{thisMonthCount} hangout{thisMonthCount !== 1 ? 's' : ''}</strong> this month</>
               : 'No hangouts yet this month — time to make some plans?'}
             {topFriend && thisMonthCount > 0 && (
-              <> — mostly with <strong style={{ color: '#3a3a50', fontWeight: 600 }}>{topFriend.name.split(' ')[0]}</strong></>
+              <> — mostly with <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{topFriend.name.split(' ')[0]}</strong></>
             )}
           </p>
 
@@ -172,17 +178,17 @@ export default function Home() {
                 <div>
                   <span style={{
                     fontFamily: 'var(--font-serif)', fontSize: '1.55rem', fontWeight: 600,
-                    color: '#2a2a3a', lineHeight: 1,
+                    color: 'var(--text)', lineHeight: 1,
                     fontStyle: (stat as any).italic ? 'italic' : 'normal',
                   }}>
                     {stat.value}
                   </span>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: '#9a9aaa', marginLeft: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', marginLeft: 6 }}>
                     {stat.label}
                   </span>
                 </div>
                 {i < arr.length - 1 && (
-                  <div style={{ width: 1, height: 22, background: 'rgba(0,0,0,0.08)' }} />
+                  <div style={{ width: 1, height: 22, background: 'var(--border-strong)' }} />
                 )}
               </div>
             ))}
@@ -203,14 +209,14 @@ export default function Home() {
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
               This month
             </span>
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', fontWeight: 600, color: '#e07a5f', lineHeight: 1 }}>
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>
               {thisMonthCount}
             </span>
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 6 }}>
               hangout{thisMonthCount !== 1 ? 's' : ''}
             </span>
           </div>
-          <div style={{ width: 1, height: 36, background: 'rgba(0,0,0,0.06)' }} />
+          <div style={{ width: 1, height: 36, background: 'var(--border)' }} />
           <div>
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
               All time
@@ -222,7 +228,7 @@ export default function Home() {
               logged
             </span>
           </div>
-          <div style={{ width: 1, height: 36, background: 'rgba(0,0,0,0.06)' }} />
+          <div style={{ width: 1, height: 36, background: 'var(--border)' }} />
           <div>
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
               Avg / month
@@ -254,7 +260,7 @@ export default function Home() {
                     <div style={{
                       position: 'absolute', right: 'calc(100% + 10px)', top: '50%',
                       transform: 'translateY(-50%)',
-                      background: '#2a2a3a', color: '#fff', borderRadius: 12,
+                      background: isDark ? '#2c2c34' : '#2a2a3a', color: '#fff', borderRadius: 12,
                       padding: '10px 14px', whiteSpace: 'nowrap', zIndex: 10,
                       fontFamily: 'var(--font-sans)', fontSize: '0.7rem',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
@@ -280,7 +286,7 @@ export default function Home() {
                       )}
                       <div style={{
                         position: 'absolute', top: '50%', left: '100%', transform: 'translateY(-50%)',
-                        width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: '5px solid #2a2a3a',
+                        width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: `5px solid ${isDark ? '#2c2c34' : '#2a2a3a'}`,
                       }} />
                     </div>
                   )}
@@ -311,7 +317,7 @@ export default function Home() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
 
         {/* Your people */}
-        <Widget className="animate-in animate-in-2" innerBg="linear-gradient(to bottom right, #ffffff 0%, #fef5f1 40%, #fce9e2 100%)">
+        <Widget className="animate-in animate-in-2" innerBg="linear-gradient(to bottom right, #ffffff 0%, #fef5f1 40%, #fce9e2 100%)" darkInnerBg="linear-gradient(to bottom right, #22222a 0%, #261f1c 40%, #2a201c 100%)">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1rem', fontWeight: 500 }}>Your people</span>
             <Link to="/friends" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textDecoration: 'none' }}>View all</Link>
@@ -319,7 +325,7 @@ export default function Home() {
           {friends.length > 0 && (innerCircleCount > 0 || closeFriendCount > 0) && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {innerCircleCount > 0 && (
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: 'rgba(224,122,95,0.08)', color: '#e07a5f' }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: 'rgba(224,122,95,0.08)', color: 'var(--accent)' }}>
                   {innerCircleCount} inner circle
                 </span>
               )}
@@ -332,7 +338,7 @@ export default function Home() {
           )}
           {friends.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontSize: '0.82rem', padding: '12px 0' }}>
-              No friends yet. <Link to="/friends?add=1" style={{ color: '#e07a5f', textDecoration: 'none' }}>Add someone</Link>
+              No friends yet. <Link to="/friends?add=1" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Add someone</Link>
             </div>
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -363,9 +369,9 @@ export default function Home() {
               <Link to="/friends?add=1" title="Add friend" style={{
                 width: 42, height: 42, borderRadius: '50%',
                 border: '2px dashed rgba(224,122,95,0.3)',
+                background: isDark ? 'rgba(232,135,110,0.06)' : 'rgba(224,122,95,0.04)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                textDecoration: 'none', color: '#e07a5f', transition: 'background 150ms ease',
-                background: 'rgba(224,122,95,0.04)',
+                textDecoration: 'none', color: 'var(--accent)', transition: 'background 150ms ease',
               }}>
                 <IconPlus size={16} />
               </Link>
@@ -374,7 +380,7 @@ export default function Home() {
         </Widget>
 
         {/* Nudges / Quick actions */}
-        <Widget className="animate-in animate-in-2" innerBg="linear-gradient(to bottom right, #ffffff 0%, #f5f3fa 40%, #ebe7f4 100%)">
+        <Widget className="animate-in animate-in-2" innerBg="linear-gradient(to bottom right, #ffffff 0%, #f5f3fa 40%, #ebe7f4 100%)" darkInnerBg="linear-gradient(to bottom right, #22222a 0%, #201f28 40%, #1e1c26 100%)">
           {nudges.length > 0 ? (
             <>
               <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1rem', fontWeight: 500, marginBottom: 14, display: 'block' }}>Nudges</span>
@@ -399,9 +405,9 @@ export default function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <Link to="/hangouts?log=1" style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 14,
-                  background: 'rgba(224,122,95,0.05)', textDecoration: 'none',
+                  background: isDark ? 'rgba(232,135,110,0.08)' : 'rgba(224,122,95,0.05)', textDecoration: 'none',
                 }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(224,122,95,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e07a5f', flexShrink: 0 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(224,122,95,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
                     <IconPlus size={15} />
                   </span>
                   <div>
@@ -411,7 +417,7 @@ export default function Home() {
                 </Link>
                 <Link to="/friends?add=1" style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 14,
-                  background: 'rgba(69,123,157,0.04)', textDecoration: 'none',
+                  background: isDark ? 'rgba(90,147,181,0.08)' : 'rgba(69,123,157,0.04)', textDecoration: 'none',
                 }}>
                   <span style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(69,123,157,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#457b9d', flexShrink: 0 }}>
                     <IconPlus size={15} />
@@ -446,7 +452,7 @@ export default function Home() {
         <div className="animate-in animate-in-3" style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem', fontWeight: 500 }}>Recent hangouts</span>
-            <Link to="/hangouts?log=1" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', fontWeight: 500, color: '#e07a5f', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+            <Link to="/hangouts?log=1" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', fontWeight: 500, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
               <IconPlus size={12} /> Log new
             </Link>
           </div>
@@ -459,7 +465,7 @@ export default function Home() {
                     <span style={{
                       position: 'absolute', top: -10, right: -4,
                       fontFamily: 'var(--font-serif)', fontSize: '4.8rem', fontWeight: 700,
-                      color: '#e07a5f', opacity: 0.035, lineHeight: 1, pointerEvents: 'none',
+                      color: 'var(--accent)', opacity: 0.035, lineHeight: 1, pointerEvents: 'none',
                     }}>
                       {h.type.charAt(0).toUpperCase()}
                     </span>
@@ -474,7 +480,7 @@ export default function Home() {
                           </div>
                         )}
                       </div>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8, marginTop: 3, background: 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: 20 }}>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8, marginTop: 3, background: 'var(--border)', padding: '2px 8px', borderRadius: 20 }}>
                         {formatDate(h.date)}
                       </span>
                     </div>
@@ -486,7 +492,7 @@ export default function Home() {
                             return (
                               <div key={hf.id} style={{
                                 width: 24, height: 24, borderRadius: '50%', background: f?.avatar_color ?? '#ccc',
-                                border: '2px solid white', marginLeft: i > 0 ? -7 : 0,
+                                border: `2px solid ${isDark ? '#1c1c22' : 'white'}`, marginLeft: i > 0 ? -7 : 0,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 overflow: 'hidden', position: 'relative', zIndex: friendAvatars.length - i,
                               }}>

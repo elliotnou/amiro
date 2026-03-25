@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from './lib/auth'
 import { SidebarProvider, useSidebar } from './lib/SidebarContext'
+import { ThemeProvider } from './lib/ThemeContext'
 import Sidebar from './components/Sidebar'
 import LoadingScreen from './components/LoadingScreen'
 import Landing from './pages/Landing'
@@ -54,6 +55,7 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <ThemeProvider>
     <SidebarProvider>
       <ScrollToTop />
       <Routes>
@@ -77,5 +79,6 @@ export default function App() {
         <Route path="/onboarding" element={<Onboarding />} />
       </Routes>
     </SidebarProvider>
+    </ThemeProvider>
   )
 }
