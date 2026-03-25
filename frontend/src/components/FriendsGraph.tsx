@@ -151,6 +151,10 @@ export default function FriendsGraph({
     }
   }, [groupEdges, connectionMap])
 
+  // Stable key — only restart simulation when friend IDs or group edges actually change
+  const friendKey = useMemo(() => friends.map(f => f.id).sort().join(','), [friends])
+  const groupEdgeKey = useMemo(() => groupEdges.map(e => `${e.source}|${e.target}`).join(','), [groupEdges])
+
   // Run force simulation — updates SVG DOM directly (no React re-renders per frame)
   useEffect(() => {
     if (friends.length === 0) return
@@ -258,7 +262,8 @@ export default function FriendsGraph({
     animRef.current = requestAnimationFrame(tick)
     const revealTimer = setTimeout(() => setSettled(true), 400)
     return () => { alive = false; cancelAnimationFrame(animRef.current); clearTimeout(revealTimer) }
-  }, [friends, groupEdges])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [friendKey, groupEdgeKey])
 
   // Drag a node with mouse
   const handleMouseDown = (id: string, e: React.MouseEvent) => {
@@ -495,24 +500,28 @@ export default function FriendsGraph({
         )
       })()}
 
-      {/* Legend */}
+      {/* Legend — top-left overlay inside the graph */}
       <div style={{
-        display: 'flex', gap: 16, marginTop: 10, justifyContent: 'center', flexWrap: 'wrap',
+        position: 'absolute', top: 14, left: 14,
+        display: 'flex', flexDirection: 'column', gap: 6,
         fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)',
+        background: 'var(--bg-card)', border: '1px solid var(--border)',
+        borderRadius: 10, padding: '10px 14px',
+        pointerEvents: 'none', opacity: 0.85,
       }}>
         {Object.entries(TIER_COLOR).map(([tier, color]) => (
-          <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <div style={{ width: 9, height: 9, borderRadius: '50%', background: color, opacity: 0.85 }} />
+          <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
             {tier === 'inner-circle' ? 'Inner circle' : tier === 'close-friend' ? 'Close friend' : 'Casual'}
           </div>
         ))}
         {groups.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <svg width={18} height={4}><line x1={0} y1={2} x2={18} y2={2} stroke="var(--text-muted)" strokeWidth={1.5} strokeDasharray="4 3" /></svg>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg width={16} height={4}><line x1={0} y1={2} x2={16} y2={2} stroke="var(--text-muted)" strokeWidth={1.5} strokeDasharray="4 3" /></svg>
             Group
           </div>
         )}
-        <div style={{ opacity: 0.6 }}>Drag · Click to open</div>
+        <div style={{ opacity: 0.55, fontSize: '0.62rem', marginTop: 2 }}>Drag · Click to open</div>
       </div>
     </div>
   )
