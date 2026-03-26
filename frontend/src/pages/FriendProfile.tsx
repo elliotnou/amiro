@@ -188,7 +188,7 @@ export default function FriendProfile() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { friend, loading, addFact, deleteFact, addNote, deleteNote, upsertContact, updateFriend } = useFriend(id)
-  const { deleteFriend } = useFriends()
+  const { friends: allFriends, deleteFriend } = useFriends()
   const { impressions, createImpression, updateImpression, deleteImpression } = useImpressions(id)
   const { hangouts } = useHangouts()
   const { status: subStatus } = useSubscription()
@@ -256,11 +256,14 @@ export default function FriendProfile() {
   }, [id])
 
   // ── Edit Info state ──
-  const [editName, setEditName] = useState('')
+  const [editFirstName, setEditFirstName] = useState('')
+  const [editLastName, setEditLastName] = useState('')
   const [editNickname, setEditNickname] = useState('')
   const [editLocation, setEditLocation] = useState('')
   const [editBirthday, setEditBirthday] = useState('')
   const [editMetHow, setEditMetHow] = useState('')
+  const [editMetThroughId, setEditMetThroughId] = useState<string | null>(null)
+  const [editMetThroughSearch, setEditMetThroughSearch] = useState('')
   const [editMetDate, setEditMetDate] = useState('')
   const [editTier, setEditTier] = useState<'inner-circle' | 'close-friend' | 'casual'>('casual')
   const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null)
@@ -274,11 +277,14 @@ export default function FriendProfile() {
 
   const openEditInfo = () => {
     if (!friend) return
-    setEditName(friend.name)
+    setEditFirstName((friend as any).first_name || friend.name.trim())
+    setEditLastName((friend as any).last_name || '')
     setEditNickname(friend.nickname || '')
     setEditLocation(friend.location || '')
     setEditBirthday(friend.birthday || '')
     setEditMetHow(friend.met_how || '')
+    setEditMetThroughId((friend as any).met_through_id || null)
+    setEditMetThroughSearch('')
     setEditMetDate(friend.met_date || '')
     setEditTier(friend.tier)
     setEditAvatarPreview(friend.avatar_url || null)
@@ -300,12 +306,15 @@ export default function FriendProfile() {
   const handleSaveInfo = async () => {
     setSavingInfo(true)
     await updateFriend({
-      name: editName.trim() || friend!.name,
+      name: [editFirstName.trim(), editLastName.trim()].filter(Boolean).join(' ') || friend!.name,
+      first_name: editFirstName.trim() || null,
+      last_name: editLastName.trim() || null,
       nickname: editNickname.trim() || null,
-      initials: (editName.trim() || friend!.name).trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0,2),
+      initials: ([editFirstName.trim(), editLastName.trim()].filter(Boolean).join(' ') || friend!.name).split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0,2),
       location: editLocation || null,
       birthday: editBirthday || null,
       met_how: editMetHow || null,
+      met_through_id: editMetHow === 'Mutual friend' ? editMetThroughId : null,
       met_date: editMetDate || null,
       tier: editTier,
       avatar_url: editAvatarUrl,
@@ -1251,8 +1260,12 @@ export default function FriendProfile() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
           <div className="form-group">
-            <label className="form-label">Name</label>
-            <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Full name" maxLength={30} />
+            <label className="form-label">First name</label>
+            <input className="form-input" value={editFirstName} onChange={e => setEditFirstName(e.target.value)} placeholder="First name" maxLength={20} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Last name</label>
+            <input className="form-input" value={editLastName} onChange={e => setEditLastName(e.target.value)} placeholder="Last name" maxLength={20} />
           </div>
           <div className="form-group">
             <label className="form-label">Nickname</label>
@@ -1278,8 +1291,65 @@ export default function FriendProfile() {
             </select>
           </div>
         </div>
+        {editMetHow === 'Mutual friend' && (() => {
+            const otherFriends = allFriends.filter(f => f.id !== id)
+            const selected = otherFriends.find(f => f.id === editMetThroughId)
+            const filtered = otherFriends.filter(f => f.name.toLowerCase().includes(editMetThroughSearch.toLowerCase()))
+            const miniAvatar = (f: typeof otherFriends[0], size = 24) => (
+              <div style={{ width: size, height: size, borderRadius: '50%', background: f.avatar_url ? 'transparent' : f.avatar_color, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {f.avatar_url
+                  ? <img src={f.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontFamily: 'var(--font-serif)', fontSize: size * 0.42, color: 'white', fontWeight: 500 }}>{f.initials}</span>}
+              </div>
+            )
+            return (
+              <div style={{ borderRadius: 'var(--radius-md)', border: '1.5px solid var(--border)', background: 'var(--bg)', padding: 12, marginTop: -4 }}>
+                {selected ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>Through</span>
+                    {miniAvatar(selected, 28)}
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', flex: 1 }}>{selected.name}</span>
+                    <button onClick={() => setEditMetThroughId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', padding: '0 2px', lineHeight: 1 }}>×</button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      placeholder="Who introduced you?"
+                      value={editMetThroughSearch}
+                      onChange={e => setEditMetThroughSearch(e.target.value)}
+                      style={{
+                        width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border)', background: 'var(--bg-card)',
+                        fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text)',
+                        outline: 'none', boxSizing: 'border-box',
+                      }}
+                    />
+                    <div style={{ maxHeight: 120, overflowY: 'auto', marginTop: 8 }}>
+                      {filtered.length === 0 && (
+                        <div style={{ padding: '8px 4px', fontFamily: 'var(--font-sans)', fontSize: '0.76rem', color: 'var(--text-muted)', textAlign: 'center' }}>No matches</div>
+                      )}
+                      {filtered.map(f => (
+                        <button key={f.id} onClick={() => { setEditMetThroughId(f.id); setEditMetThroughSearch('') }} style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                          padding: '6px 8px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                          border: 'none', background: 'transparent', textAlign: 'left',
+                          transition: 'background 120ms ease',
+                        }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover, rgba(0,0,0,0.04))')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          {miniAvatar(f)}
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text)' }}>{f.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })()}
 
-        <div className="form-group">
+        <div className="form-group" style={{ marginTop: 16 }}>
           <label className="form-label">Tier</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {([

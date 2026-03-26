@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { getFirstName } from '../lib/nameUtils'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useFriendGroups } from '../lib/hooks/useFriendGroups'
 import { useFriends } from '../lib/hooks/useFriends'
@@ -519,7 +520,7 @@ export function GroupFlow({ allFriends, initialGroup, onSave, onClose, onDelete 
               <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setStep(0)}>← Back</button>
                 <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '13px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', background: color, color: 'white', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.94rem', opacity: saving ? 0.6 : 1, transition: 'opacity 200ms' }}>
-                  {saving ? 'Creating…' : `Create ${name.split(' ')[0]}`}
+                  {saving ? 'Creating…' : `Create ${getFirstName(name)}`}
                 </button>
               </div>
             </div>

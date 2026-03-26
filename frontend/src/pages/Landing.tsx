@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { getFirstName } from '../lib/nameUtils'
 import { Link } from 'react-router-dom'
 import { IconArrowRight } from '../components/Icons'
 import gsap from 'gsap'
@@ -190,7 +191,7 @@ export default function Landing() {
                     <img src={a.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                   <div style={{ padding: '8px 10px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 500, color: '#2a1a16' }}>{a.name.split(' ')[0]}</div>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.72rem', fontWeight: 500, color: '#2a1a16' }}>{getFirstName(a.name)}</div>
                   </div>
                 </div>
               ))}

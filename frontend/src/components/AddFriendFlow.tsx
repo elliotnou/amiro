@@ -14,21 +14,33 @@ function getInitials(name: string) {
 
 export interface AddFriendPayload {
   name: string
+  first_name: string
+  last_name: string
   initials: string
   avatar_color: string
   avatar_url: string | null
   location: string | null
   birthday: string | null
   met_how: string | null
+  met_through_id: string | null
   met_date: string | null
   tier: 'inner-circle' | 'close-friend' | 'casual'
   tags: string[]
   interests: string[]
 }
 
+interface ExistingFriend {
+  id: string
+  name: string
+  avatar_url: string | null
+  avatar_color: string
+  initials: string
+}
+
 interface Props {
   onClose: () => void
   onSave: (payload: AddFriendPayload) => Promise<{ error: string | null } | void>
+  existingFriends?: ExistingFriend[]
 }
 
 const TIERS: { key: 'inner-circle' | 'close-friend' | 'casual'; emoji: string; desc: string }[] = [
@@ -39,11 +51,12 @@ const TIERS: { key: 'inner-circle' | 'close-friend' | 'casual'; emoji: string; d
 
 const MET_HOW_OPTIONS = ['School','Work','Mutual friend','Online','Neighborhood','Event','Travel','Family','Other']
 
-export default function AddFriendFlow({ onClose, onSave }: Props) {
+export default function AddFriendFlow({ onClose, onSave, existingFriends = [] }: Props) {
   const [step, setStep] = useState(0)
 
   // Step 0 — Who
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [color, setColor] = useState(() => COLORS[Math.floor(Math.random() * COLORS.length)])
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
@@ -53,6 +66,8 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
   // Step 1 — Connection + Details
   const [tier, setTier] = useState<'inner-circle' | 'close-friend' | 'casual'>('casual')
   const [metHow, setMetHow] = useState('')
+  const [metThroughId, setMetThroughId] = useState<string | null>(null)
+  const [metThroughSearch, setMetThroughSearch] = useState('')
   const [metDate, setMetDate] = useState('')
   const [location, setLocation] = useState('')
   const [birthday, setBirthday] = useState('')
@@ -62,7 +77,8 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const overlayMousedown = useRef(false)
 
-  const initials = name.trim() ? getInitials(name) : '?'
+  const name = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
+  const initials = name ? getInitials(name) : '?'
 
   const handlePhotoSelect = async (file: File) => {
     setAvatarPreview(URL.createObjectURL(file))
@@ -84,12 +100,15 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
     setSaveError(null)
     const result = await onSave({
       name: name.trim(),
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
       initials: getInitials(name),
       avatar_color: color,
       avatar_url: avatarUrl,
       location: location || null,
       birthday: birthday || null,
       met_how: metHow || null,
+      met_through_id: metHow === 'Mutual friend' ? metThroughId : null,
       met_date: metDate || null,
       tier,
       tags: [],
@@ -187,10 +206,16 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
 
               <input
                 autoFocus className="form-input"
-                placeholder="Full name"
-                value={name} onChange={e => setName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && name.trim() && setStep(1)}
-                style={{ fontSize: '1.1rem', textAlign: 'center', fontFamily: 'var(--font-serif)', marginBottom: 18 }}
+                placeholder="First name"
+                value={firstName} onChange={e => setFirstName(e.target.value)}
+                style={{ fontSize: '1.1rem', textAlign: 'center', fontFamily: 'var(--font-serif)', marginBottom: 8 }}
+              />
+              <input
+                className="form-input"
+                placeholder="Last name"
+                value={lastName} onChange={e => setLastName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && name && setStep(1)}
+                style={{ fontSize: '0.92rem', textAlign: 'center', fontFamily: 'var(--font-serif)', marginBottom: 18, opacity: 0.85 }}
               />
 
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, textAlign: 'center' }}>Pick a colour</p>
@@ -200,7 +225,7 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
                 ))}
               </div>
 
-              <button className="btn btn-primary" style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }} onClick={() => setStep(1)} disabled={!name.trim()}>
+              <button className="btn btn-primary" style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }} onClick={() => setStep(1)} disabled={!firstName.trim()}>
                 Continue →
               </button>
             </div>
@@ -212,7 +237,7 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
               {miniAvatar}
 
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', fontWeight: 500, marginBottom: 3, textAlign: 'center' }}>
-                How do you know {name.split(' ')[0]}?
+                How do you know {firstName.trim()}?
               </h2>
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 20 }}>
                 Where do they fit in your world?
@@ -238,9 +263,9 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
 
               {/* How you met */}
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>How did you meet?</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: metHow === 'Mutual friend' ? 10 : 16 }}>
                 {MET_HOW_OPTIONS.map(opt => (
-                  <button key={opt} onClick={() => setMetHow(metHow === opt ? '' : opt)} style={{
+                  <button key={opt} onClick={() => { setMetHow(metHow === opt ? '' : opt); if (opt !== 'Mutual friend') { setMetThroughId(null); setMetThroughSearch('') } }} style={{
                     padding: '5px 11px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                     fontFamily: 'var(--font-sans)', fontSize: '0.76rem',
                     border: `1.5px solid ${metHow === opt ? color : 'var(--border)'}`,
@@ -250,6 +275,67 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
                   }}>{opt}</button>
                 ))}
               </div>
+
+              {/* Met through — inline extension */}
+              {metHow === 'Mutual friend' && existingFriends.length > 0 && (() => {
+                const selected = existingFriends.find(f => f.id === metThroughId)
+                const filtered = existingFriends.filter(f =>
+                  f.name.toLowerCase().includes(metThroughSearch.toLowerCase())
+                )
+                const avatar = (f: ExistingFriend, size = 24) => (
+                  <div style={{ width: size, height: size, borderRadius: '50%', background: f.avatar_url ? 'transparent' : f.avatar_color, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {f.avatar_url
+                      ? <img src={f.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontFamily: 'var(--font-serif)', fontSize: size * 0.42, color: 'white', fontWeight: 500 }}>{f.initials}</span>}
+                  </div>
+                )
+                return (
+                  <div style={{ marginBottom: 16, borderRadius: 'var(--radius-md)', border: `1.5px solid ${color}30`, background: `${color}08`, padding: 12 }}>
+                    {selected ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>Through</span>
+                        {avatar(selected, 28)}
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', flex: 1 }}>{selected.name}</span>
+                        <button onClick={() => setMetThroughId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', padding: '0 2px', lineHeight: 1 }}>×</button>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          autoFocus
+                          placeholder="Who introduced you?"
+                          value={metThroughSearch}
+                          onChange={e => setMetThroughSearch(e.target.value)}
+                          style={{
+                            width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--border)', background: 'var(--bg-card)',
+                            fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text)',
+                            outline: 'none', boxSizing: 'border-box',
+                          }}
+                        />
+                        <div style={{ maxHeight: 130, overflowY: 'auto', marginTop: 8 }}>
+                          {filtered.length === 0 && (
+                            <div style={{ padding: '8px 4px', fontFamily: 'var(--font-sans)', fontSize: '0.76rem', color: 'var(--text-muted)', textAlign: 'center' }}>No matches</div>
+                          )}
+                          {filtered.map(f => (
+                            <button key={f.id} onClick={() => { setMetThroughId(f.id); setMetThroughSearch('') }} style={{
+                              display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                              padding: '6px 8px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                              border: 'none', background: 'transparent', textAlign: 'left',
+                              transition: 'background 120ms ease',
+                            }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover, rgba(0,0,0,0.04))')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            >
+                              {avatar(f)}
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--text)' }}>{f.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
                 <div className="form-group" style={{ margin: 0 }}>
@@ -279,7 +365,7 @@ export default function AddFriendFlow({ onClose, onSave }: Props) {
                   onClick={handleSave} disabled={saving || uploading}
                   style={{ flex: 2, padding: '13px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', background: color, color: 'white', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.94rem', opacity: (saving || uploading) ? 0.6 : 1, transition: 'opacity 200ms' }}
                 >
-                  {saving ? 'Adding…' : `Add ${name.split(' ')[0]} ✦`}
+                  {saving ? 'Adding…' : `Add ${firstName.trim()} ✦`}
                 </button>
               </div>
             </div>

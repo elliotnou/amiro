@@ -1,4 +1,5 @@
 import { useFriends } from '../lib/hooks/useFriends'
+import { getFirstName } from '../lib/nameUtils'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import { tierColor, tierLabel } from '../data/mock'
 import Avatar from '../components/Avatar'
@@ -295,7 +296,7 @@ export default function Stats() {
             {hangoutCounts.slice(0, 8).map(f => (
               <Link key={f.id} to={`/friends/${f.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
                 <Avatar initials={f.initials} color={f.avatar_color} url={f.avatar_url} size="sm" />
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text)', width: 80, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name.split(' ')[0]}</span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text)', width: 80, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getFirstName(f.name)}</span>
                 <div style={{ flex: 1, height: 7, background: 'var(--bg-hover)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${(f.count / maxCount) * 100}%`, background: tierColor(f.tier), borderRadius: 4, transition: 'width 0.5s ease' }} />
                 </div>
@@ -367,7 +368,7 @@ export default function Stats() {
                   </div>
                   <Avatar initials={f.initials} color={f.avatar_color} url={f.avatar_url} size="sm" />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name.split(' ')[0]}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getFirstName(f.name)}</div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.65rem', color: 'var(--text-muted)' }}>{tierLabel(f.tier)}</div>
                   </div>
                   <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '1.1rem', color: colors[i] }}>{f.count}</span>
@@ -389,7 +390,7 @@ export default function Stats() {
                 <Link key={f.id} to={`/friends/${f.id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)', transition: 'background 0.15s' }}>
                   <Avatar initials={f.initials} color={f.avatar_color} url={f.avatar_url} size="sm" />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{f.name.split(' ')[0]}</span>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{getFirstName(f.name)}</span>
                     <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.65rem', color: 'var(--text-muted)' }}>{tierLabel(f.tier)}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>

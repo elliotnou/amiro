@@ -74,10 +74,14 @@ export default function Friends() {
     })
     .sort((a, b) => {
       switch (sort) {
-        case 'first-name': return a.name.localeCompare(b.name)
+        case 'first-name': {
+          const aFirst = (a as any).first_name || a.name.split(' ').slice(0, -1).join(' ') || a.name
+          const bFirst = (b as any).first_name || b.name.split(' ').slice(0, -1).join(' ') || b.name
+          return aFirst.localeCompare(bFirst)
+        }
         case 'last-name': {
-          const aLast = a.name.split(' ').at(-1) ?? a.name
-          const bLast = b.name.split(' ').at(-1) ?? b.name
+          const aLast = (a as any).last_name || a.name.split(' ').at(-1) ?? a.name
+          const bLast = (b as any).last_name || b.name.split(' ').at(-1) ?? b.name
           return aLast.localeCompare(bLast)
         }
         case 'most-hangs': return (hangoutCountById[b.id] ?? 0) - (hangoutCountById[a.id] ?? 0)
@@ -191,12 +195,14 @@ export default function Friends() {
             friends={friends.map(f => ({
               id: f.id,
               name: f.name,
+              first_name: (f as any).first_name ?? null,
               initials: f.initials,
               avatar_color: f.avatar_color,
               avatar_url: f.avatar_url ?? null,
               tier: f.tier ?? null,
               hangout_count: hangoutCountById[f.id] ?? 0,
               starred: (f as any).starred ?? false,
+              met_through_id: (f as any).met_through_id ?? null,
             }))}
             groups={friendGroups.map(g => ({ id: g.id, name: g.name, color: g.color, memberIds: g.memberIds }))}
           />
@@ -252,6 +258,7 @@ export default function Friends() {
         <AddFriendFlow
           onClose={() => setShowFlow(false)}
           onSave={handleSave}
+          existingFriends={friends.map(f => ({ id: f.id, name: f.name, avatar_url: f.avatar_url ?? null, avatar_color: f.avatar_color, initials: f.initials }))}
         />
       )}
     </div>

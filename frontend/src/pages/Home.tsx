@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { getFirstName } from '../lib/nameUtils'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useFriends } from '../lib/hooks/useFriends'
 import { useHangouts } from '../lib/hooks/useHangouts'
@@ -173,7 +174,7 @@ export default function Home() {
               ? <>You've had <strong style={{ color: 'var(--accent)', fontWeight: 600 }}>{thisMonthCount} hangout{thisMonthCount !== 1 ? 's' : ''}</strong> this month</>
               : 'No hangouts yet this month — time to make some plans?'}
             {topFriend && thisMonthCount > 0 && (
-              <> — mostly with <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{topFriend.name.split(' ')[0]}</strong></>
+              <> — mostly with <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{getFirstName(topFriend.name)}</strong></>
             )}
           </p>
 
@@ -182,7 +183,7 @@ export default function Home() {
               { value: friends.length, label: 'friends' },
               { value: hangouts.length, label: 'hangouts' },
               ...(longestFriend && longestFriend.day_count > 0
-                ? [{ value: `day ${longestFriend.day_count.toLocaleString()}`, label: `with ${longestFriend.name.split(' ')[0]}`, italic: true }]
+                ? [{ value: `day ${longestFriend.day_count.toLocaleString()}`, label: `with ${getFirstName(longestFriend.name)}`, italic: true }]
                 : []),
             ].map((stat, i, arr) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: i < arr.length - 1 ? 28 : 0 }}>
@@ -505,7 +506,7 @@ export default function Home() {
                               })}
                             </div>
                             <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.66rem', color: 'var(--text-muted)', marginLeft: 8 }}>
-                              {h.hangout_friends.length === 1 ? h.hangout_friends[0].friend_name.split(' ')[0] : `${h.hangout_friends.length} friends`}
+                              {h.hangout_friends.length === 1 ? getFirstName(h.hangout_friends[0].friend_name) : `${h.hangout_friends.length} friends`}
                             </span>
                           </div>
                         )}
@@ -544,7 +545,7 @@ export default function Home() {
                         </div>
                         <div>
                           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.83rem', fontWeight: 600, color: 'var(--text)' }}>
-                            {f.name.split(' ')[0]}
+                            {getFirstName(f.name)}
                           </div>
                           <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
                             {MONTH_ABBR[bdDate.getMonth()]} {bdDate.getDate()}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { getFirstName } from '../lib/nameUtils'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useHangout, useHangouts } from '../lib/hooks/useHangouts'
 import { useFriends } from '../lib/hooks/useFriends'
@@ -306,7 +307,7 @@ if (section === 'friends') {
                   {groups.filter(g => g.name.toLowerCase().includes(editWhoSearch.toLowerCase())).map(g => {
                     const selected = editGroupId === g.id
                     const disabled = !!editGroupId && !selected
-                    const memberNames = g.memberIds.map(id => friends.find(f => f.id === id)?.name.split(' ')[0]).filter(Boolean)
+                    const memberNames = g.memberIds.map(id => friends.find(f => f.id === id)).filter(Boolean).map(f => getFirstName(f.name))
                     return (
                       <div key={g.id} onClick={() => !disabled && toggleEditGroup(g.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', cursor: disabled ? 'default' : 'pointer', borderBottom: '1px solid var(--border)', background: selected ? `${g.color}0c` : 'transparent', opacity: disabled ? 0.35 : 1, transition: 'background 120ms, opacity 120ms' }}>
                         <div style={{ width: 34, height: 34, borderRadius: 8, background: `${g.color}18`, border: `1px solid ${g.color}30`, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: g.color, fontFamily: 'var(--font-serif)', fontSize: '0.75rem', fontWeight: 600 }}>

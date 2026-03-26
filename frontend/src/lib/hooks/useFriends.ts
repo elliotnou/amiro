@@ -20,7 +20,12 @@ export function useFriends() {
       .select('*')
       .order('created_at', { ascending: false })
     if (error) setError(error.message)
-    else setFriends(data ?? [])
+    else setFriends((data ?? []).map(f => ({
+      ...f,
+      day_count: f.met_date
+        ? Math.max(0, Math.floor((Date.now() - new Date(f.met_date).getTime()) / 86400000))
+        : f.day_count,
+    })))
     setLoading(false)
   }, [user])
 

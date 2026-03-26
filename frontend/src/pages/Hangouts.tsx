@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { getFirstName } from '../lib/nameUtils'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useHangouts } from '../lib/hooks/useHangouts'
 import { useFriends } from '../lib/hooks/useFriends'
@@ -203,7 +204,7 @@ function HangoutsCalendar({ hangouts, bannerMap }: { hangouts: ReturnType<typeof
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: 'var(--font-serif)', fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.type}</div>
                       {h.location && <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.location}</div>}
-                      {h.hangout_friends.length > 0 && <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>{h.hangout_friends.map(hf => hf.friend_name.split(' ')[0]).join(', ')}</div>}
+                      {h.hangout_friends.length > 0 && <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>{h.hangout_friends.map(hf => getFirstName(hf.friend_name)).join(', ')}</div>}
                     </div>
                     <span style={{ color: 'var(--text-muted)', fontSize: '1rem', flexShrink: 0 }}>›</span>
                   </Link>
@@ -658,7 +659,7 @@ export default function Hangouts() {
             {groups.filter(g => g.name.toLowerCase().includes(hWhoSearch.toLowerCase())).map(g => {
               const selected = hSelectedGroup === g.id
               const disabled = !!hSelectedGroup && !selected
-              const memberNames = g.memberIds.map(id => friends.find(f => f.id === id)?.name.split(' ')[0]).filter(Boolean)
+              const memberNames = g.memberIds.map(id => friends.find(f => f.id === id)).filter(Boolean).map(f => getFirstName(f.name))
               return (
                 <div key={g.id} onClick={() => !disabled && toggleGroup(g.id)} style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',

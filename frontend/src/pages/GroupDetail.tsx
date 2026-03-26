@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { getFirstName } from '../lib/nameUtils'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useFriendGroups } from '../lib/hooks/useFriendGroups'
 import { useFriends } from '../lib/hooks/useFriends'
@@ -61,7 +62,7 @@ function MemberDock({ members }: { members: any[] }) {
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             maxWidth: 72,
           }}>
-            {f.name.split(' ')[0]}
+            {getFirstName(f.name)}
           </span>
         </Link>
       ))}

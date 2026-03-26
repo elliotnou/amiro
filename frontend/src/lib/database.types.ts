@@ -30,6 +30,8 @@ export type Database = {
           id: string
           user_id: string
           name: string
+          first_name: string | null
+          last_name: string | null
           nickname: string | null
           initials: string
           avatar_color: string
@@ -37,6 +39,7 @@ export type Database = {
           location: string | null
           tier: 'inner-circle' | 'close-friend' | 'casual'
           met_how: string | null
+          met_through_id: string | null
           met_date: string | null
           birthday: string | null
           day_count: number
@@ -51,6 +54,8 @@ export type Database = {
           id?: string
           user_id: string
           name: string
+          first_name?: string | null
+          last_name?: string | null
           nickname?: string | null
           initials: string
           avatar_color: string
@@ -58,6 +63,7 @@ export type Database = {
           location?: string | null
           tier?: 'inner-circle' | 'close-friend' | 'casual'
           met_how?: string | null
+          met_through_id?: string | null
           met_date?: string | null
           birthday?: string | null
           day_count?: number
@@ -68,6 +74,8 @@ export type Database = {
         }
         Update: {
           name?: string
+          first_name?: string | null
+          last_name?: string | null
           nickname?: string | null
           initials?: string
           avatar_color?: string
@@ -75,6 +83,7 @@ export type Database = {
           location?: string | null
           tier?: 'inner-circle' | 'close-friend' | 'casual'
           met_how?: string | null
+          met_through_id?: string | null
           met_date?: string | null
           birthday?: string | null
           day_count?: number

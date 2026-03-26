@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { getFirstName } from '../lib/nameUtils'
 import { useParams, Link } from 'react-router-dom'
 import { useFriend } from '../lib/hooks/useFriend'
 import { useHangouts } from '../lib/hooks/useHangouts'
@@ -159,7 +160,7 @@ function FriendAIPage({ title, buildPrompt, friendId }: {
           <IconSparkle size={18} />
         </div>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 500 }}>{title(friend.name.split(' ')[0])}</h1>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 500 }}>{title(getFirstName(friend.name))}</h1>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
             Based on {friend.facts.length} facts · {friend.notes.length} notes · {impressions.length} impressions · {friendHangouts.length} hangouts
           </p>
@@ -222,7 +223,7 @@ export function AIFriendshipStory() {
           <IconSparkle size={18} />
         </div>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 500 }}>Your story with {friend.name.split(' ')[0]}</h1>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 500 }}>Your story with {getFirstName(friend.name)}</h1>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
             Based on {friend.facts.length} facts · {friend.notes.length} notes · {impressions.length} impressions · {friendHangouts.length} hangouts
           </p>
