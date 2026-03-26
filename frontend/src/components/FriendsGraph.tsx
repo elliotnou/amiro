@@ -544,8 +544,8 @@ export default function FriendsGraph({
           height: 'auto',
           display: 'block',
           borderRadius: 20,
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
+          background: 'var(--bg)',
+          border: '1px solid rgba(0,0,0,0.12)',
           cursor: cursorUrl,
         }}
       >
@@ -775,7 +775,8 @@ export default function FriendsGraph({
         position: 'absolute', top: 14, left: 14,
         display: 'flex', flexDirection: 'column', gap: 6,
         fontFamily: 'var(--font-sans)', fontSize: '0.68rem', color: 'var(--text-muted)',
-        background: 'rgba(255,255,255,0.85)',
+        background: 'transparent',
+        border: '1px solid rgba(0,0,0,0.12)',
         borderRadius: 10, padding: '10px 14px',
         pointerEvents: 'none',
       }}>
