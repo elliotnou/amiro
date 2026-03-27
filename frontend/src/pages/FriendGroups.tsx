@@ -642,7 +642,7 @@ function GroupDetail({ group, allFriends, onClose, onDelete, onEdit }: DetailPro
         </p>
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>
-          <button className="btn btn-primary" style={{ background: 'var(--negative)', borderColor: 'var(--negative)' }} onClick={onDelete}>Delete</button>
+          <button className="btn btn-primary" style={{ background: 'var(--negative)', borderColor: 'var(--negative)', color: 'white' }} onClick={onDelete}>Delete</button>
         </div>
       </Modal>
     </>

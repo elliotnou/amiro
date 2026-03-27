@@ -205,6 +205,9 @@ export default function Friends() {
               met_through_id: (f as any).met_through_id ?? null,
             }))}
             groups={friendGroups.map(g => ({ id: g.id, name: g.name, color: g.color, memberIds: g.memberIds }))}
+            allFriends={friends}
+            allGroups={friendGroups}
+            hangouts={hangouts}
           />
         </div>
       ) : (

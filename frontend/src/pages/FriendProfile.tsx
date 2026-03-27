@@ -1596,7 +1596,7 @@ export default function FriendProfile() {
           <button className="btn btn-ghost" onClick={() => { setShowDeleteConfirm(false); setDeleteNameInput('') }}>Cancel</button>
           <button
             className="btn btn-primary"
-            style={{ background: 'var(--negative)', borderColor: 'var(--negative)', opacity: deleteNameInput === friend.name ? 1 : 0.4, cursor: deleteNameInput === friend.name ? 'pointer' : 'not-allowed' }}
+            style={{ background: 'var(--negative)', borderColor: 'var(--negative)', color: 'white', opacity: deleteNameInput === friend.name ? 1 : 0.4, cursor: deleteNameInput === friend.name ? 'pointer' : 'not-allowed' }}
             disabled={deleteNameInput !== friend.name}
             onClick={handleDeleteFriend}
           >Delete forever</button>
@@ -1609,6 +1609,7 @@ export default function FriendProfile() {
           localStorage.setItem('profile_tour_complete', '1')
         }} />
       )}
+
     </div>
   )
 }

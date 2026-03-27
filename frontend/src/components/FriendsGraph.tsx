@@ -1,5 +1,11 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { findConnectionPath, type PathStep } from '../lib/connectionPath'
+import ConnectionPathModal from './ConnectionPathModal'
+import type { FriendRow } from '../lib/hooks/useFriends'
+import type { FriendGroupWithMembers } from '../lib/hooks/useFriendGroups'
+import type { HangoutWithFriends } from '../lib/hooks/useHangouts'
 
 interface GF {
   id: string
@@ -67,11 +73,22 @@ function metThroughPath(ax: number, ay: number, bx: number, by: number) {
 export default function FriendsGraph({
   friends,
   groups = [],
+  allFriends = [],
+  allGroups = [],
+  hangouts = [],
 }: {
   friends: GF[]
   groups?: GroupInfo[]
+  allFriends?: FriendRow[]
+  allGroups?: FriendGroupWithMembers[]
+  hangouts?: HangoutWithFriends[]
 }) {
   const navigate = useNavigate()
+  const [connectMode, setConnectMode] = useState(false)
+  const [connectFrom, setConnectFrom] = useState<string | null>(null)
+  const [activePath, setActivePath] = useState<PathStep[] | null>(null)
+  const [showPathModal, setShowPathModal] = useState(false)
+  const connectModeRef = useRef(false)
   const svgRef = useRef<SVGSVGElement>(null)
   const nodesRef = useRef<SimNode[]>([])
   const animRef = useRef<number>(0)
@@ -292,6 +309,90 @@ export default function FriendsGraph({
 
   applyHighlightRef.current = applyHighlight
 
+  // Keep connectMode ref in sync
+  useEffect(() => { connectModeRef.current = connectMode }, [connectMode])
+
+  // Apply path highlight — same style as hover/drag highlight, no extra overlays
+  useEffect(() => {
+    if (!activePath || activePath.length < 2) {
+      applyHighlightRef.current(null)
+      return
+    }
+
+    const pathIds = new Set(activePath.map(s => s.friendId))
+    const pathEdgePairs = new Set<string>()
+    for (let i = 1; i < activePath.length; i++) {
+      pathEdgePairs.add([activePath[i - 1].friendId, activePath[i].friendId].sort().join('|'))
+    }
+
+    // Nodes: show path nodes + names, dim rest
+    for (const fId of Object.keys(nodeEls.current)) {
+      const el = nodeEls.current[fId]
+      if (!el) continue
+      const nameEl = nodeNameEls.current[fId]
+      const onPath = pathIds.has(fId)
+      el.style.opacity = onPath ? '1' : '0.15'
+      el.style.transition = 'opacity 250ms ease'
+      if (nameEl) {
+        nameEl.style.opacity = onPath ? '1' : '0'
+        nameEl.style.transition = 'opacity 250ms ease'
+      }
+    }
+
+    // Group edges: highlight path edges, dim rest
+    for (const e of groupEdges) {
+      const key = `g:${[e.source, e.target].sort().join('|')}:${e.color}`
+      const lineEl = groupLineEls.current[key]
+      if (!lineEl) continue
+      const onPath = pathEdgePairs.has([e.source, e.target].sort().join('|'))
+      lineEl.setAttribute('opacity', onPath ? '0.85' : '0.06')
+      lineEl.setAttribute('stroke-width', onPath ? '3' : '1.5')
+      lineEl.style.transition = 'opacity 250ms ease'
+    }
+
+    // Met-through edges
+    for (const e of metThroughEdges) {
+      const key = `mt:${e.from}:${e.through}`
+      const lineEl = metThroughLineEls.current[key]
+      if (!lineEl) continue
+      const onPath = pathEdgePairs.has([e.from, e.through].sort().join('|'))
+      lineEl.setAttribute('opacity', onPath ? '0.8' : '0.06')
+      lineEl.setAttribute('stroke-width', onPath ? '2.5' : '1')
+      lineEl.style.transition = 'opacity 250ms ease'
+    }
+
+    // Group centroid labels for groups used in path
+    const pathGroupIds = new Set<string>()
+    for (const step of activePath) {
+      if (step.edge?.type === 'group') {
+        for (const g of groups) {
+          if (g.name === step.edge.label) pathGroupIds.add(g.id)
+        }
+      }
+    }
+    for (const g of groups) {
+      const labelEl = groupCentroidLabelEls.current[g.id]
+      if (!labelEl) continue
+      if (pathGroupIds.has(g.id)) {
+        const members = g.memberIds.filter(mid => friendMap[mid])
+        const nodeMap: Record<string, SimNode> = {}
+        for (const nd of nodesRef.current) nodeMap[nd.id] = nd
+        let cx = 0, cy = 0, count = 0
+        for (const mid of members) {
+          const nd = nodeMap[mid]
+          if (nd) { cx += nd.x; cy += nd.y; count++ }
+        }
+        if (count > 0) {
+          labelEl.setAttribute('x', (cx / count).toFixed(1))
+          labelEl.setAttribute('y', (cy / count - 8).toFixed(1))
+        }
+        labelEl.setAttribute('opacity', '1')
+      } else {
+        labelEl.setAttribute('opacity', '0')
+      }
+    }
+  }, [activePath, groupEdges, metThroughEdges, groups, friendMap])
+
   // Stable key — only restart simulation when friend IDs or group edges actually change
   const friendKey = useMemo(() => friends.map(f => f.id).sort().join(','), [friends])
   const groupEdgeKey = useMemo(() => groupEdges.map(e => `${e.source}|${e.target}`).join(','), [groupEdges])
@@ -445,8 +546,16 @@ export default function FriendsGraph({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [friendKey, groupEdgeKey])
 
-  // Drag a node with mouse
+  const clearPath = useCallback(() => {
+    setActivePath(null)
+    setConnectFrom(null)
+    setConnectMode(false)
+  }, [])
+
+  // Drag a node with mouse (disabled in connect mode)
   const handleMouseDown = (id: string, e: React.MouseEvent) => {
+    if (connectModeRef.current) return
+    if (activePath) { clearPath(); return }
     e.preventDefault()
     dragRef.current = id
     didDragRef.current = false
@@ -535,7 +644,10 @@ export default function FriendsGraph({
   const cursorUrl = `url("data:image/svg+xml,${encodeURIComponent(cursorSvg)}") 3 1, auto`
 
   return (
-    <div style={{ position: 'relative', userSelect: 'none', opacity: settled ? 1 : 0, transition: 'opacity 400ms ease', borderRadius: 20, overflow: 'hidden' }}>
+    <div
+      style={{ position: 'relative', userSelect: 'none', opacity: settled ? 1 : 0, transition: 'opacity 400ms ease', borderRadius: 20, overflow: 'hidden' }}
+      onClick={() => { if (activePath) clearPath() }}
+    >
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
@@ -631,7 +743,22 @@ export default function FriendsGraph({
                 onMouseMove={ev => {
                   if (!dragRef.current) setTooltipPos({ x: ev.clientX, y: ev.clientY })
                 }}
-                onClick={() => { if (!didDragRef.current) navigate(`/friends/${f.id}`) }}
+                onClick={() => {
+                  if (connectMode) {
+                    if (!connectFrom) {
+                      setConnectFrom(f.id)
+                    } else if (f.id !== connectFrom) {
+                      const result = findConnectionPath(connectFrom, f.id, allFriends, allGroups, hangouts)
+                      setActivePath(result)
+                      setConnectMode(false)
+                    }
+                  } else if (activePath) {
+                    clearPath()
+                  } else {
+                    if (didDragRef.current) return
+                    navigate(`/friends/${f.id}`)
+                  }
+                }}
               >
                 {/* Tier ring */}
                 <circle r={r + 3.5} fill={tc} opacity={0.25} />
@@ -796,6 +923,157 @@ export default function FriendsGraph({
         </div>
         <div style={{ opacity: 0.9, fontSize: '0.66rem', marginTop: 4, fontWeight: 500 }}>Drag for details · Click to open</div>
       </div>
+
+      {/* Find connection button — top-right */}
+      {/* Find connection button — top-right */}
+      {!activePath && (
+        <button
+          onClick={() => {
+            if (connectMode) {
+              setConnectMode(false)
+              setConnectFrom(null)
+            } else {
+              setConnectMode(true)
+              setConnectFrom(null)
+              setActivePath(null)
+            }
+          }}
+          style={{
+            position: 'absolute', top: 14, right: 14,
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '7px 14px',
+            borderRadius: 'var(--radius-full)',
+            border: connectMode ? '1px solid var(--accent)' : '1px solid var(--border)',
+            background: connectMode ? 'var(--accent-bg)' : 'var(--bg)',
+            color: connectMode ? 'var(--accent)' : 'var(--text-muted)',
+            fontFamily: 'var(--font-sans)', fontSize: '0.72rem', fontWeight: 600,
+            cursor: 'pointer',
+            opacity: 0.9,
+            transition: 'all 150ms ease',
+          }}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="5" cy="12" r="3" /><circle cx="19" cy="12" r="3" /><line x1="8" y1="12" x2="16" y2="12" />
+          </svg>
+          {connectMode
+            ? (connectFrom ? 'Now pick the 2nd person' : 'Pick the 1st person')
+            : 'Find connection'}
+        </button>
+      )}
+
+      {/* Bottom bar: picking hint OR path result info */}
+      {connectMode && connectFrom && !activePath && (
+        <div style={{
+          position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '6px 16px', borderRadius: 'var(--radius-full)',
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-sm)',
+          fontFamily: 'var(--font-sans)', fontSize: '0.72rem', color: 'var(--text-secondary)',
+        }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: '50%',
+            background: friendMap[connectFrom]?.avatar_color || 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontSize: '0.5rem', fontWeight: 600, fontFamily: 'var(--font-serif)',
+          }}>
+            {friendMap[connectFrom]?.initials}
+          </div>
+          <span style={{ fontWeight: 500 }}>{friendMap[connectFrom]?.name}</span>
+          <span style={{ color: 'var(--text-muted)' }}>→ pick another</span>
+          <button onClick={() => { setConnectMode(false); setConnectFrom(null) }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', padding: '0 2px' }}>✕</button>
+        </div>
+      )}
+
+      {/* Path result bar */}
+      {activePath && activePath.length >= 2 && (
+        <div style={{
+          position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '8px 18px', borderRadius: 'var(--radius-full)',
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-md)',
+          fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: 'var(--text-secondary)',
+        }}>
+          <span style={{ fontWeight: 600, color: 'var(--text)' }}>
+            {friendMap[activePath[0].friendId]?.name}
+          </span>
+          <span style={{ color: 'var(--text-muted)' }}>→</span>
+          <span style={{ fontWeight: 600, color: 'var(--text)' }}>
+            {friendMap[activePath[activePath.length - 1].friendId]?.name}
+          </span>
+          <button
+            onClick={e => { e.stopPropagation(); setShowPathModal(true) }}
+            className="shimmer-btn"
+            style={{
+              position: 'relative', overflow: 'hidden',
+              padding: '3px 12px', borderRadius: 'var(--radius-full)',
+              background: 'linear-gradient(135deg, #e07a5f22, #457b9d22, #7c6fbd22)',
+              border: '1px solid rgba(124, 111, 189, 0.25)',
+              fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)',
+              cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              transition: 'all 200ms ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #e07a5f33, #457b9d33, #7c6fbd33)'
+              e.currentTarget.style.borderColor = 'rgba(124, 111, 189, 0.4)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #e07a5f22, #457b9d22, #7c6fbd22)'
+              e.currentTarget.style.borderColor = 'rgba(124, 111, 189, 0.25)'
+            }}
+          >
+            <span style={{ position: 'relative', zIndex: 1 }}>
+              {activePath.length - 1} degree{activePath.length - 1 !== 1 ? 's' : ''} →
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* No path found */}
+      {activePath === null && connectFrom && !connectMode && (
+        <div style={{
+          position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 18px', borderRadius: 'var(--radius-full)',
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-md)',
+          fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: 'var(--text-muted)',
+          pointerEvents: 'none',
+        }}>
+          No connection found
+        </div>
+      )}
+
+      {activePath && activePath.length >= 2 && createPortal(
+        <ConnectionPathModal
+          open={showPathModal}
+          onClose={() => setShowPathModal(false)}
+          path={activePath}
+          friends={allFriends}
+        />,
+        document.body,
+      )}
+
+      <style>{`
+        .shimmer-btn::before {
+          content: '';
+          position: absolute;
+          top: 0; left: -100%;
+          width: 200%; height: 100%;
+          background: linear-gradient(
+            120deg,
+            transparent 25%,
+            rgba(255,255,255,0.35) 50%,
+            transparent 75%
+          );
+          animation: shimmerSlide 2.5s ease-in-out infinite;
+        }
+        @keyframes shimmerSlide {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
+      `}</style>
     </div>
   )
 }

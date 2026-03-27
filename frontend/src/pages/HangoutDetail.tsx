@@ -450,7 +450,7 @@ if (section === 'friends') {
           </p>
           <div className="modal-actions">
             <button className="btn btn-ghost" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
-            <button className="btn btn-primary" style={{ background: 'var(--negative)', borderColor: 'var(--negative)' }} onClick={handleDelete} disabled={deleting}>
+            <button className="btn btn-primary" style={{ background: 'var(--negative)', borderColor: 'var(--negative)', color: 'white' }} onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Deleting…' : 'Delete'}
             </button>
           </div>
